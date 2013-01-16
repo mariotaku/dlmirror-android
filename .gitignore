@@ -2,6 +2,7 @@
 *.slo
 *.lo
 *.o
+*.o.d
 
 # Compiled Dynamic libraries
 *.so
@@ -11,3 +12,7 @@
 *.lai
 *.la
 *.a
+
+# Backup files
+*.*~
+*~
