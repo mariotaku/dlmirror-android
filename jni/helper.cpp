@@ -59,7 +59,6 @@ void rgb24_to_rgb16( uint8_t* rgb24, uint8_t* rgb16, int count, int host_bit_ord
 	}
 }
 
-
 void rgba32_to_rgb16( uint8_t* rgba32, uint8_t* rgb16, int count, int host_bit_order ) {
 	for (int i = 0; i < count; i++) {
 		uint8_t r = rgba32[i*3+0];
@@ -75,11 +74,10 @@ void rgba32_to_rgb16( uint8_t* rgba32, uint8_t* rgb16, int count, int host_bit_o
 	}
 }
 
-void screencap_to_rgb16( uint8_t* rgba32, uint8_t* rgb16, int count, int host_bit_order ) {
+void screencap_to_rgb16( uint32_t* rgba32, uint16_t* rgb16, int count, int host_bit_order ) {
 	for (int i = 0; i < count; i++) {
-		uint8_t r = rgba32[i*3+0];
-		uint8_t g = rgba32[i*3+1];
-		uint8_t b = rgba32[i*3+2];
+		uint32_t pixel = rgba32[i]; 
+		unsigned int r = pixel & 0xFF, g = (pixel >> 8) & 0xFF, b = (pixel >> 16) & 0xFF;
 		if (host_bit_order) {
 			rgb16[i*2+1] =  (r & 0xF8)       | ((g & 0xE0) >> 5);
 			rgb16[i*2+0] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
@@ -112,20 +110,6 @@ void read_rgb24( const char* filename, uint8_t* rgb24, int count ) {
 	close(f);
 }
 
-void do_screencap(uint8_t* rgba32, int count ) {
-	FILE* data = popen("screencap", "r");
-	pclose(data);
-}
-
-uint8_t* read_screencap( uint8_t* rgba32, int count, int host_bit_order ) {
-
-	uint8_t* rgb16 = (uint8_t*)malloc(count*2);
-	screencap_to_rgb16(rgba32,rgb16,count,host_bit_order);
-
-	free(rgba32);
-	return rgb16;
-}
-
 uint8_t* read_rgb16( const char* filename, int count, int host_bit_order ) {
 
 	uint8_t* rgb16 = (uint8_t*)malloc(count*2);
@@ -136,23 +120,6 @@ uint8_t* read_rgb16( const char* filename, int count, int host_bit_order ) {
 
 	free( rgb24 );
 	return rgb16;
-}
-
-int get_byte_per_pixel(int format) {
-	switch (format) {
-		case PIXEL_FORMAT_BGRA_8888:
-		case PIXEL_FORMAT_RGBA_8888:
-		case PIXEL_FORMAT_RGBX_8888:
-			return 4;
-		case PIXEL_FORMAT_RGB_888:
-			return 3;
-		case PIXEL_FORMAT_RGBA_4444:
-		case PIXEL_FORMAT_RGBA_5551:
-		case PIXEL_FORMAT_RGB_565:
-			return 2;
-		default:
-			return 0;
-	}
 }
 
 uint16_t color_rgba8888_to_rgb565(uint32_t rgba32) {

@@ -8,6 +8,7 @@ LOCAL_MODULE:= tubecable
 LOCAL_SRC_FILES:= \
  tubecable.cpp \
  helper.cpp \
+ android_screencap.cpp \
  tubecable_demo.cpp
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libusb

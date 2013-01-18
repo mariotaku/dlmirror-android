@@ -342,7 +342,6 @@ int dl_huffman_load_table( const char* filename );
 // Append one huffman bit sequence to the stream.
 void dl_huffman_append( dl_cmdstream* cs, int16_t value );
 
-
 // Append one 512-byte block of compressed data to the stream.
 int dl_huffman_compress( dl_cmdstream* cs, int addr, int pcount, uint16_t* pixels, int blocksize = DL_HUFFMAN_BLOCKSIZE );
 
