@@ -149,20 +149,20 @@ void dl_ctrl_get_edid( usb_dev_handle* handle, uint8_t edid[128], int timeout ) 
 /********************* COMMAND BUFFER *********************/
 
 // Initialize a new command buffer and allocate space.
-void create( dl_cmdstream* cs, int size ) {
+void dl_create_stream( dl_cmdstream* cs, int size ) {
 	cs->buffer = (uint8_t*)malloc( size );
 	cs->size = size;
 	cs->pos = cs->bitpos = 0;
 }
 
 // Delete the command buffer.
-void destroy( dl_cmdstream* cs ) {
+void dl_destroy_stream( dl_cmdstream* cs ) {
 	free( cs->buffer );
 	cs->size = 0;
 }
 
 // Send a command buffer to the device.
-void send( usb_dev_handle* handle, dl_cmdstream* cs, int ep, int timeout ) {
+void dl_send_command( usb_dev_handle* handle, dl_cmdstream* cs, int ep, int timeout ) {
 	usb_bulk_write( handle, ep, (char*)cs->buffer, cs->pos, timeout );
 	cs->pos = 0;
 }
@@ -174,7 +174,7 @@ void send( usb_dev_handle* handle, dl_cmdstream* cs, int ep, int timeout ) {
 void dl_cmd_unknown( dl_cmdstream* cs ) {
 	insertb( cs, DL_CMD_START   );
 	insertb( cs, DL_CMD_UNKNOWN );
-	insertb( cs, 0x0B           );
+	insertb( cs, 0x0B);
 }
 
 // Flush/synchronize/execute all commands up to this point.
@@ -283,9 +283,9 @@ void dl_reg_set_offsets( dl_cmdstream* cs, int start16, int stride16, int start8
 // Insert a generic GFX command into the stream.
 void dl_gfx_base( dl_cmdstream* cs, uint8_t cmd, int addr, uint8_t count ) {
 	insertb( cs, DL_CMD_START );
-	insertb( cs,          cmd );
-	inserta( cs,         addr );
-	insertb( cs,        count );
+	insertb( cs, cmd );
+	inserta( cs, addr );
+	insertb( cs, count );
 }
 
 // Insert a raw-write command into the stream.
@@ -315,7 +315,7 @@ void dl_gfx_rle( dl_cmdstream* cs, int addr, uint8_t count, dl_rle_word* rs ) {
 // Insert a on-device memcopy command into the stream.
 void dl_gfx_copy( dl_cmdstream* cs, int src_addr, int dst_addr, uint8_t count ) {
 	dl_gfx_base( cs, DL_GFX_COPY | DL_GFX_WORD, dst_addr, count );
-  inserta( cs, src_addr );
+	inserta( cs, src_addr );
 }
 
 
@@ -999,7 +999,7 @@ void dl_init( usb_dev_handle* handle ) {
 	uint8_t peek;
 
 	dl_cmdstream cs;
-	create( &cs, 10*1024 );
+	dl_create_stream( &cs, 10*1024 );
 
 	printf("dl_init(): starting DisplayLink initialization..\n");
 
@@ -1034,9 +1034,9 @@ void dl_init( usb_dev_handle* handle ) {
 	
 	printf( "  sending decompressor table (%d bytes)..\n", sizeof(dl_huffman_device_table) );
 	dl_huffman_set_device_table( &cs, sizeof(dl_huffman_device_table), dl_huffman_device_table );
-	send( handle, &cs );
+	dl_send_command( handle, &cs );
 
 	printf("dl_init(): initialization done.\n\n");
-	destroy( &cs );
+	dl_destroy_stream( &cs );
 }
 

@@ -3,11 +3,25 @@
  *
  * Copyright (c) 2000-2003 Johannes Erdfelt <johannes@erdfelt.com>
  *
- * This library is covered by the LGPL, read LICENSE for details.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  * This file (and only this file) may alternatively be licensed under the
- * BSD license as well, read LICENSE for details.
+ * BSD license. See the LICENSE file shipped with the libusb-compat-0.1 source
+ * distribution for details.
  */
+
 #ifndef __USB_H__
 #define __USB_H__
 
@@ -219,16 +233,6 @@ struct usb_ctrl_setup {
 /* Error codes */
 #define USB_ERROR_BEGIN			500000
 
-/*
- * This is supposed to look weird. This file is generated from autoconf
- * and I didn't want to make this too complicated.
- */
-#if 0
-#define USB_LE16_TO_CPU(x) do { x = ((x & 0xff) << 8) | ((x & 0xff00) >> 8); } while(0)
-#else
-#define USB_LE16_TO_CPU(x)
-#endif
-
 /* Data types */
 struct usb_device;
 struct usb_bus;
@@ -294,12 +298,12 @@ int usb_get_descriptor(usb_dev_handle *udev, unsigned char type,
 	unsigned char index, void *buf, int size);
 
 /* <arch>.c */
-int usb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int size,
+int usb_bulk_write(usb_dev_handle *dev, int ep, const char *bytes, int size,
 	int timeout);
 int usb_bulk_read(usb_dev_handle *dev, int ep, char *bytes, int size,
 	int timeout);
-int usb_interrupt_write(usb_dev_handle *dev, int ep, char *bytes, int size,
-        int timeout);
+int usb_interrupt_write(usb_dev_handle *dev, int ep, const char *bytes,
+	int size, int timeout);
 int usb_interrupt_read(usb_dev_handle *dev, int ep, char *bytes, int size,
         int timeout);
 int usb_control_msg(usb_dev_handle *dev, int requesttype, int request,
@@ -312,13 +316,11 @@ int usb_resetep(usb_dev_handle *dev, unsigned int ep);
 int usb_clear_halt(usb_dev_handle *dev, unsigned int ep);
 int usb_reset(usb_dev_handle *dev);
 
-#if 1
 #define LIBUSB_HAS_GET_DRIVER_NP 1
 int usb_get_driver_np(usb_dev_handle *dev, int interface, char *name,
 	unsigned int namelen);
 #define LIBUSB_HAS_DETACH_KERNEL_DRIVER_NP 1
 int usb_detach_kernel_driver_np(usb_dev_handle *dev, int interface);
-#endif
 
 char *usb_strerror(void);
 

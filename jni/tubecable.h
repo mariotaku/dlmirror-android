@@ -87,13 +87,13 @@ typedef struct {
 
 
 // Initialize a new command buffer and allocate space.
-void create( dl_cmdstream* cs, int size );
+void dl_create_stream( dl_cmdstream* cs, int size );
 
 // Delete the command buffer.
-void destroy( dl_cmdstream* cs );
+void dl_destroy_stream( dl_cmdstream* cs );
 
 // Send a command buffer to the device.
-void send( usb_dev_handle *handle, dl_cmdstream* cs, int ep = 1, int timeout = 1000 ); 
+void dl_send_command( usb_dev_handle *handle, dl_cmdstream* cs, int ep = 1, int timeout = 1000 ); 
 
 // Insert one byte into the command buffer.
 inline void insertb( dl_cmdstream* cs, uint8_t val ) {
@@ -103,22 +103,22 @@ inline void insertb( dl_cmdstream* cs, uint8_t val ) {
 // Insert one word into the command buffer.
 inline void insertw( dl_cmdstream* cs, uint16_t val ) {
 	insertb( cs, (val >> 8) & 0xFF );
-	insertb( cs, (val     ) & 0xFF );
+	insertb( cs, (val) & 0xFF );
 }
 
 // Insert an device memory address into the command buffer.
 inline void inserta( dl_cmdstream* cs, uint32_t address ) {
 	insertb( cs, (address >> 16) & 0xFF );
 	insertb( cs, (address >>  8) & 0xFF );
-	insertb( cs, (address      ) & 0xFF );
+	insertb( cs, (address) & 0xFF );
 }
 
 // Insert a doubleword into the command buffer.
 inline void insertd( dl_cmdstream* cs, uint32_t val ) {
 	insertb( cs, (val >> 24) & 0xFF );
 	insertb( cs, (val >> 16) & 0xFF );
-	insertb( cs, (val >>  8) & 0xFF );
-	insertb( cs, (val      ) & 0xFF );
+	insertb( cs, (val >> 8) & 0xFF );
+	insertb( cs, (val) & 0xFF );
 }
 
 // Insert a sequence of bytes into the command buffer.
@@ -152,6 +152,8 @@ void dl_cmd_sync( dl_cmdstream* cs );
 /******************* REGISTER COMMANDS ********************/
 
 #define DL_REG_COLORDEPTH   0x00 // 0x00 = 16 bit, 0x01 = 24 bit
+#define DL_REG_COLORDEPTH_16   0x00
+#define DL_REG_COLORDEPTH_24   0x01
 
 #define DL_REG_XDSTART_MSB  0x01 // x display start - LFSR16
 #define DL_REG_XDSTART_LSB  0x02
