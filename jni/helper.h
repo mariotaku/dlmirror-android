@@ -30,6 +30,8 @@ extern uint16_t supported_usb_product_ids[6];
 // get a device handle according to vendor and product
 usb_dev_handle* usb_get_device_handle( int vendor, int product, int interface = 0 );
 
+usb_dev_handle* dl_get_supported_device_handle();
+
 // convert 24-bit rgb data to 16-bit rgb 565 data.
 // host bit order (uint16_t) for compression is the default, data sent 
 // to the device from a little-endian machine needs to clear this flag
@@ -53,4 +55,4 @@ uint8_t* read_screencap( uint8_t* rgba32, int count, int host_bit_order = 1);
 
 int get_byte_per_pixel(int format);
 
-uint16_t color_rgba8888_to_rgb565(uint8_t* rgba32);
+uint16_t color_rgba8888_to_rgb565(uint32_t rgba32);

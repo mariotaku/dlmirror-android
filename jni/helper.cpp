@@ -1,6 +1,8 @@
 #include "helper.h"
 #include "tubecable.h"
 
+#define DISPLAY_LINK_VENDOR_ID 0x17E9
+
 uint16_t supported_usb_product_ids[6] = {
 	0x01ae, // DL-120
 	0x0141, // DL-160
@@ -31,6 +33,15 @@ usb_dev_handle* usb_get_device_handle( int vendor, int product, int interface ) 
 		}
 	}
 	return 0;
+}
+
+usb_dev_handle* dl_get_supported_device_handle() {
+	usb_dev_handle* handle = 0;
+	for (int i = 0; i < sizeof(supported_usb_product_ids); i++) {
+		handle = usb_get_device_handle(DISPLAY_LINK_VENDOR_ID, supported_usb_product_ids[i]);
+		if (handle) break;
+	}
+	return handle;
 }
 
 void rgb24_to_rgb16( uint8_t* rgb24, uint8_t* rgb16, int count, int host_bit_order ) {
@@ -144,7 +155,8 @@ int get_byte_per_pixel(int format) {
 	}
 }
 
-uint16_t color_rgba8888_to_rgb565(uint8_t* rgba32) {
+uint16_t color_rgba8888_to_rgb565(uint32_t rgba32) {
 	if (sizeof(rgba32) != 4) return 0;
-	return (rgba32[0] << 11) | (rgba32[1] << 5) | rgba32[2];
+	unsigned int r = rgba32 & 0xFF, g = (rgba32 >> 8) & 0xFF, b = (rgba32 >> 16) & 0xFF;
+	return (r >> 3 << 11) | (g >> 2 << 5) | b >> 3;
 }

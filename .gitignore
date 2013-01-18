@@ -16,3 +16,6 @@
 # Backup files
 *.*~
 *~
+
+# NDK generated files
+obj/
