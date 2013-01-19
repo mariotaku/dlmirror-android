@@ -127,3 +127,24 @@ uint16_t color_rgba8888_to_rgb565(uint32_t rgba32) {
 	unsigned int r = rgba32 & 0xFF, g = (rgba32 >> 8) & 0xFF, b = (rgba32 >> 16) & 0xFF;
 	return (r >> 3 << 11) | (g >> 2 << 5) | b >> 3;
 }
+
+void scale_rgba8888(uint32_t* in, uint32_t* out, int w, int h, int scale) {
+	int count = w * h;
+	for (int i = 0; i < count; i+= scale) {
+		int x = i / h;
+		if (x % scale != 0) continue;
+		int y = i % h;
+		out[w * y / (scale * scale) + x / scale] = in[i];
+	}
+}
+
+void rotate_scale_rgba8888(uint32_t* in, uint32_t* out, int w, int h, int scale) {
+	int count = w * h;
+	int rw = h, rh = w;
+	for (int i = 0; i < count; i+= scale) {
+		int rx = i / rh;
+		if (rx % scale != 0) continue;
+		int ry = i % rh;
+		out[rw * ry / (scale * scale) + rx / scale] = in[i];
+	}
+}

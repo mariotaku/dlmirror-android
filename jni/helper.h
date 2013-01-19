@@ -39,3 +39,7 @@ void read_screencapdata( const char* filename, uint8_t* rgba32, int count );
 uint8_t* read_rgb16( const char* filename, int count, int host_bit_order = 1 );
 
 uint16_t color_rgba8888_to_rgb565(uint32_t rgba32);
+
+void scale_rgba8888(uint32_t* in, uint32_t* out, int w, int h, int scale = 1);
+
+void rotate_scale_rgba8888(uint32_t* in, uint32_t* out, int w, int h, int scale = 1);
