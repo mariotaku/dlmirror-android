@@ -1,8 +1,14 @@
 #include "helper.h"
 #include "android_screencap.h"
 
+#ifdef ANDROID
+	#define SCREENCAP_COMMAND "/system/bin/screencap"
+#else
+	#define SCREENCAP_COMMAND "adb shell screencap | sed 's/\r$//'"
+#endif
+
 screencap_info get_screencap_info() {
-	FILE* stream = popen("screencap", "r");
+	FILE* stream = popen(SCREENCAP_COMMAND, "r");
 	uint16_t* header = (uint16_t*) malloc(SCREENCAP_HEADER_SIZE);
 	fread(header, SCREENCAP_HEADER_SIZE, 1, stream);
 	screencap_info info = {0, 0, 0};
@@ -15,7 +21,7 @@ screencap_info get_screencap_info() {
 }
 
 void do_screencap(uint32_t* buffer, int data_size) {
-	FILE* stream = popen("screencap", "r");
+	FILE* stream = popen(SCREENCAP_COMMAND, "r");
 	uint16_t* header = (uint16_t*) malloc(SCREENCAP_HEADER_SIZE);
 	// Skip first 12 bytes data.
 	fread(header, SCREENCAP_HEADER_SIZE, 1, stream);

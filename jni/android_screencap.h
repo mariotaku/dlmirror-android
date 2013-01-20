@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 
 #define PIXEL_FORMAT_RGBA_8888 1
 #define PIXEL_FORMAT_RGBX_8888 2

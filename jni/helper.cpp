@@ -21,7 +21,7 @@ usb_dev_handle* usb_get_device_handle( int vendor, int product, int interface ) 
 	usb_find_devices();
 
 	struct usb_bus* busses = usb_get_busses();
-		
+
 	for ( struct usb_bus* bus = busses; bus; bus = bus->next ) {
 		for ( struct usb_device* dev = bus->devices; dev; dev = dev->next ) {
 			if ((dev->descriptor.idVendor == vendor) && (dev->descriptor.idProduct == product)) {
@@ -37,7 +37,7 @@ usb_dev_handle* usb_get_device_handle( int vendor, int product, int interface ) 
 
 usb_dev_handle* dl_get_supported_device_handle() {
 	usb_dev_handle* handle = 0;
-	for (int i = 0; i < sizeof(supported_usb_product_ids); i++) {
+	for (unsigned int i = 0; i < sizeof(supported_usb_product_ids); i++) {
 		handle = usb_get_device_handle(DISPLAY_LINK_VENDOR_ID, supported_usb_product_ids[i]);
 		if (handle) break;
 	}

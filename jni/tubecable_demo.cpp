@@ -22,6 +22,8 @@ int main(int argc, char* argv[]) {
 
 	if (!handle) {
 		printf("Couldn't find supported device; exiting.\n");
+		screencap_info info = get_screencap_info();
+		printf("w: %d, h: %d, fm: %d\n", info.width, info.height, info.format);
 		return 1;
 	}
 
@@ -41,7 +43,7 @@ int main(int argc, char* argv[]) {
 
 	update_screen(handle);
 	//show_screen(handle);
-	
+
 	printf("goodbye.\n");
 	dl_destroy_stream(&cs);
 	usb_close(handle);
@@ -69,22 +71,18 @@ void show_screen(usb_dev_handle* handle) {
 	clear_screen(handle);
 	dl_cmdstream cs;
 	printf("execute screencap command\n");
-	FILE* stream = popen("screencap", "r");
-	uint16_t* header = (uint16_t*) malloc(SCREENCAP_HEADER_SIZE);
-	fread(header, SCREENCAP_HEADER_SIZE, 1, stream);
-	int w = header[SCREENCAP_HEADER_INDEX_WIDTH];
-	int h = header[SCREENCAP_HEADER_INDEX_HEIGHT];
-	int f = header[SCREENCAP_HEADER_INDEX_FORMAT];
+	screencap_info info = get_screencap_info();
+	int w = info.width, h = info.height, f =info.format; 
 	int bpp = get_byte_per_pixel(f);
 	printf("width: %d, height: %d, bpp: %d\n", w, h, bpp);
 	int screen_size = w * h;
 	int data_size = screen_size * bpp;
 	uint32_t* image = (uint32_t*) malloc(data_size);
 	uint16_t* image16 = (uint16_t*) malloc(data_size);
-	
-	fread(image, data_size, 1, stream);
+	do_screencap(image, data_size);
 	printf("convert to rgb16...\n");
 	screencap_to_rgb16(image, image16, screen_size);
+	free(image);
 	dl_create_stream( &cs, XRES * YRES * 16);
 
 	int myaddr = 0;
@@ -106,7 +104,6 @@ void show_screen(usb_dev_handle* handle) {
 	dl_cmd_sync(&cs);
 	dl_send_command(handle, &cs);
 	dl_destroy_stream(&cs);
-	pclose(stream);
 }
 
 void write_pixel(dl_cmdstream* cs, int y, int x, dl_rle_word* color) {
@@ -123,18 +120,23 @@ void update_screen(usb_dev_handle* handle) {
 	int bpp = get_byte_per_pixel(f);
 	int data_size = screen_size * bpp;
 	uint32_t* image = (uint32_t*) malloc(data_size);
+	uint32_t* prev_image = (uint32_t*) malloc(data_size);
+	dl_create_stream( &cs, XRES * YRES * 16);
 	while (1) {
 		do_screencap(image, data_size);
-		dl_create_stream( &cs, XRES * YRES * 16);
 		for (int i = 0; i < screen_size; i++) {
 			int y = YRES - (YRES - w) / 2 - i % w;
 			int x = (XRES - h) / 2 + i / w;
-			color.value = color_rgba8888_to_rgb565(image[i]);
-			write_pixel(&cs, y, x, &color);
+			if (image[i] != prev_image[i]) {
+				prev_image[i] = image[i];
+				color.value = color_rgba8888_to_rgb565(image[i]);
+				write_pixel(&cs, y, x, &color);
+			}
 		}
 		dl_cmd_sync(&cs);
 		dl_send_command(handle, &cs);
-		dl_destroy_stream(&cs);
 	}
+	dl_destroy_stream(&cs);
 	free(image);
+	free(prev_image);
 }
