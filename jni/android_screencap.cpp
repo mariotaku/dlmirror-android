@@ -1,12 +1,6 @@
 #include "helper.h"
 #include "android_screencap.h"
 
-#ifdef ANDROID
-	#define SCREENCAP_COMMAND "/system/bin/screencap"
-#else
-	#define SCREENCAP_COMMAND "adb shell screencap | sed 's/\r$//'"
-#endif
-
 screencap_info get_screencap_info() {
 	FILE* stream = popen(SCREENCAP_COMMAND, "r");
 	uint16_t* header = (uint16_t*) malloc(SCREENCAP_HEADER_SIZE);

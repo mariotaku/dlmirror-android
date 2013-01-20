@@ -6,14 +6,14 @@
 #define YRES 1050
 
 inline void write_pixel(dl_cmdstream* cs, int i, int j, dl_rle_word* color);
-inline void update_screen(usb_dev_handle* handle);
-inline void show_screen(usb_dev_handle* handle);
-inline void clear_screen(usb_dev_handle* handle);
+inline void update_screen(usb_dev_handle* handle, dl_cmdstream* cs);
+inline void show_screen(usb_dev_handle* handle, dl_cmdstream* cs);
+inline void clear_screen(usb_dev_handle* handle, dl_cmdstream* cs);
 
 int main(int argc, char* argv[]) {
 
 	dl_cmdstream cs;
-	dl_create_stream( &cs, 1024 * 1024);
+	dl_create_stream(&cs, XRES * YRES * 8);
 
 	// load huffman table
 	dl_huffman_load_table("/sdcard/tubecable_huffman.bin");
@@ -32,16 +32,17 @@ int main(int argc, char* argv[]) {
 
 	// default register set & offsets
 	printf("setting default registers for %dx%d@60Hz..\n",XRES,YRES);
-	dl_reg_set_all( &cs, DL_MODE_XY(XRES,YRES) );
-	dl_reg_set_offsets( &cs, 0x000000, XRES*2, 0x555555, XRES );
-	dl_reg_set( &cs, DL_REG_BLANK_SCREEN, 0x00 ); // enable output
-	dl_reg_set( &cs, DL_REG_SYNC, 0xFF );
-	dl_cmd_sync( &cs );
-	dl_send_command( handle, &cs );
+	dl_reg_set_all( &cs, DL_MODE_XY(XRES,YRES));
+	dl_reg_set_offsets( &cs, 0x000000, XRES*2, 0x555555, XRES);
+	dl_reg_set(&cs, DL_REG_BLANK_SCREEN, 0x00); // enable output
+	dl_reg_set(&cs, DL_REG_SYNC, 0xFF);
+	dl_cmd_sync(&cs);
+	dl_send_command(handle, &cs);
 
 	sleep(1);
 
-	update_screen(handle);
+	clear_screen(handle, &cs);
+	update_screen(handle, &cs);
 	//show_screen(handle);
 
 	printf("goodbye.\n");
@@ -49,30 +50,21 @@ int main(int argc, char* argv[]) {
 	usb_close(handle);
 }
 
-void clear_screen(usb_dev_handle* handle) {
-	dl_cmdstream cs;
+void clear_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	dl_rle_word black = { 0x00, 0x0000 };
-	dl_create_stream( &cs, XRES * YRES * 16);
 	for (int i = 0; i < YRES; i++) {
-		int count = XRES;
-		int offs = 0;
-		while (count > 0) {
-			dl_gfx_rle( &cs, i*XRES*2+offs, 0, &black );
-			offs += 2*256;
-			count -= 256;
+		for (int j = 0; j < XRES; j += 256) {
+			dl_gfx_rle(cs, i * XRES * 2 + j * 2, 0, &black);
 		}
 	}
-	dl_cmd_sync(&cs);
-	dl_send_command(handle, &cs);
-	dl_destroy_stream(&cs);
+	dl_cmd_sync(cs);
+	dl_send_command(handle, cs);
 }
 
-void show_screen(usb_dev_handle* handle) {
-	clear_screen(handle);
-	dl_cmdstream cs;
+void show_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	printf("execute screencap command\n");
 	screencap_info info = get_screencap_info();
-	int w = info.width, h = info.height, f =info.format; 
+	int w = info.width, h = info.height, f = info.format; 
 	int bpp = get_byte_per_pixel(f);
 	printf("width: %d, height: %d, bpp: %d\n", w, h, bpp);
 	int screen_size = w * h;
@@ -83,60 +75,63 @@ void show_screen(usb_dev_handle* handle) {
 	printf("convert to rgb16...\n");
 	screencap_to_rgb16(image, image16, screen_size);
 	free(image);
-	dl_create_stream( &cs, XRES * YRES * 16);
 
 	int myaddr = 0;
 	int mypcnt = 0;
 	int imgsize = w * h;
 
 	// very important: before adding compressed blocks, set register 0x20 to 0xFF once
-	dl_reg_set( &cs, DL_REG_SYNC, 0xFF );
+	dl_reg_set(cs, DL_REG_SYNC, 0xFF);
 
 	printf("compress...\n");
 	while (mypcnt < imgsize) {
-		int res = dl_huffman_compress( &cs, myaddr, imgsize-mypcnt, image16+mypcnt );
+		int res = dl_huffman_compress(cs, myaddr, imgsize-mypcnt, image16+mypcnt );
 		mypcnt += res;
 		myaddr += res*2;
 	}
 	
-	printf( "encoded %d bytes\n",cs.pos );
+	printf( "encoded %d bytes\n",cs->pos);
 	
-	dl_cmd_sync(&cs);
-	dl_send_command(handle, &cs);
-	dl_destroy_stream(&cs);
+	dl_cmd_sync(cs);
+	dl_send_command(handle, cs);
 }
 
 void write_pixel(dl_cmdstream* cs, int y, int x, dl_rle_word* color) {
-	dl_gfx_rle(cs, y * XRES * 2 + x * 2, 1, color );
+	dl_gfx_rle(cs, y * XRES * 2 + x * 2, 1, color);
 }
 
-void update_screen(usb_dev_handle* handle) {
-	clear_screen(handle);
-	dl_cmdstream cs;
-	dl_rle_word color = { 0x1, 0x0000 };
+void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	screencap_info info = get_screencap_info();
 	int w = info.width, h = info.height, f = info.format;
-	int screen_size = w * h;
-	int bpp = get_byte_per_pixel(f);
+	int rw = h, rh = w;
+	int pv = (YRES - rh) / 2, ph = (XRES - rw) / 2;
+	int screen_size = w * h, bpp = get_byte_per_pixel(f);
 	int data_size = screen_size * bpp;
 	uint32_t* image = (uint32_t*) malloc(data_size);
-	uint32_t* prev_image = (uint32_t*) malloc(data_size);
-	dl_create_stream( &cs, XRES * YRES * 16);
+	uint32_t pixel = 0;
+	//dl_rle_word* rle_buf = (dl_rle_word*) malloc(256 * 4);
+	dl_rle_word color = {0x01, 0x0000};
+	//int fps;
 	while (1) {
-		do_screencap(image, data_size);
+		FILE* stream = popen(SCREENCAP_COMMAND, "r");
+		for (int i = 0; i < 3; i++) {
+			fread(&pixel, 4, 1, stream);
+		}
 		for (int i = 0; i < screen_size; i++) {
-			int y = YRES - (YRES - w) / 2 - i % w;
-			int x = (XRES - h) / 2 + i / w;
-			if (image[i] != prev_image[i]) {
-				prev_image[i] = image[i];
-				color.value = color_rgba8888_to_rgb565(image[i]);
-				write_pixel(&cs, y, x, &color);
+			fread(&pixel, 4, 1, stream);
+			if (pixel != image[i]) {
+				image[i] = pixel;
+				int y = YRES - (pv + i % w);
+				int x = i / w + ph;
+				color.value = color_rgba8888_to_rgb565(pixel);
+				write_pixel(cs, y, x, &color);
 			}
 		}
-		dl_cmd_sync(&cs);
-		dl_send_command(handle, &cs);
+		pclose(stream);
+		dl_cmd_sync(cs);
+		dl_send_command(handle, cs);
+		printf("drawed 1 frame\n");
+	
 	}
-	dl_destroy_stream(&cs);
 	free(image);
-	free(prev_image);
 }

@@ -14,6 +14,12 @@
 #define SCREENCAP_HEADER_INDEX_HEIGHT 2
 #define SCREENCAP_HEADER_INDEX_FORMAT 4
 
+#ifdef ANDROID
+	#define SCREENCAP_COMMAND "/system/bin/screencap"
+#else
+	#define SCREENCAP_COMMAND "adb shell screencap | sed 's/\r$//'"
+#endif
+
 typedef struct {
 	int width;
 	int height;
