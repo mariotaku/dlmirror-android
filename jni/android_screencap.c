@@ -4,8 +4,11 @@
 screencap_info get_screencap_info() {
 	FILE* stream = popen(SCREENCAP_COMMAND, "r");
 	uint16_t* header = (uint16_t*) malloc(SCREENCAP_HEADER_SIZE);
-	fread(header, SCREENCAP_HEADER_SIZE, 1, stream);
+	size_t ret = fread(header, SCREENCAP_HEADER_SIZE, 1, stream);
 	screencap_info info = {0, 0, 0};
+	if (ret != SCREENCAP_HEADER_SIZE) {
+		return info;
+	}
 	info.width = header[SCREENCAP_HEADER_INDEX_WIDTH];
 	info.height = header[SCREENCAP_HEADER_INDEX_HEIGHT];
 	info.format = header[SCREENCAP_HEADER_INDEX_FORMAT];

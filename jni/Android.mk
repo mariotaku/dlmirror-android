@@ -6,10 +6,10 @@ LOCAL_STATIC_LIBRARIES := libusb
 LOCAL_MODULE:= tubecable
 
 LOCAL_SRC_FILES:= \
- tubecable.cpp \
- helper.cpp \
- android_screencap.cpp \
- tubecable_demo.cpp
+ tubecable.c \
+ helper.c \
+ android_screencap.c \
+ tubecable_demo.c
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/libusb
 

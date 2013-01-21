@@ -35,10 +35,11 @@ uint16_t dl_crypt_ofsbuffer[0x1000];
 
 // Generate a CRC12 over len bytes of data. Generator polynom:
 // x^12 + x^11 + x^3 + x^2 + x + 1 = 0001 1000 0000 1111 = 0x180F
-int dl_crypt_crc12( uint8_t* data, int len) {
-	int rem = 0;
-	for (int i = 0; i < len; i++) {
-		for (int j = 0; j < 8; j++) {
+int dl_crypt_crc12(uint8_t* data, int len) {
+	int i, rem = 0;
+	for (i = 0; i < len; i++) {
+		int j;
+		for (j = 0; j < 8; j++) {
 			rem = (rem << 1) | ((data[i] >> j) & 0x01);
 			if (rem & 0x1000) rem = rem ^ DL_CRYPT_CRC12;
 		}
@@ -47,71 +48,78 @@ int dl_crypt_crc12( uint8_t* data, int len) {
 }
 
 // Fill key buffer and reverse-mapping buffer with pseudorandom numbers.
-void dl_crypt_generate_key( uint8_t key[0x11000], uint16_t map[0x1000] ) {
+void dl_crypt_generate_key(uint8_t key[0x11000], uint16_t map[0x1000]) {
 
-  int coeffs[0x20];
-  int count = 0;
+	int coeffs[0x20];
+	int count = 0;
 
-  // loop1:
-  for (int i = 0; i < 0x20; i++) {
+	
+	// loop1:
+	int i1;
+ 	for (i1 = 0; i1 < 0x20; i1++) {
 
-    int tmp = 1 << i;
-    if (!(tmp & DL_CRYPT_LFSR12)) continue;
+		int tmp = 1 << i1;
+		if (!(tmp & DL_CRYPT_LFSR12)) continue;
 
-    coeffs[count] = i;
-    count++;
-  }
+		coeffs[count] = i1;
+		count++;
+	}
 
-  int val = 0x01;
+	int val = 0x01;
 
   // loop2:
-  for (int i = 0; i < 0x11000; i++) {
+	int i2;
+	for (i2 = 0; i2 < 0x11000; i2++) {
 
-    key[i] = val;
-    if (i < 0x1000) map[val] = i;
+		key[i2] = val;
+		if (i2 < 0x1000) map[val] = i2;
 
-    // loop3:
-    for ( int j = 8; j > 0; j--) {
+		// loop3:
+		int j;
+		for (j = 8; j > 0; j--) {
 
-      int res = 0;
+			int res = 0;
 
 			// loop4:
-      for (int k = 0; k < count; k++) {
-        int coeff = coeffs[k];
-        coeff = val >> coeff;
-        res = res ^ coeff;
-      }
+			int k;
+			for (k = 0; k < count; k++) {
+				int coeff = coeffs[k];
+				coeff = val >> coeff;
+				res = res ^ coeff;
+			}
 
-      res = res & 1;
-      res = res ^ (2*val);
-      val = res & 0xFFF;
-    }
-  }
+			res = res & 1;
+			res = res ^ (2*val);
+			val = res & 0xFFF;
+		}
+	}
 }
 
 
 /********************* CONTROL STUFF **********************/
 
 // Read one byte of in-device memory (wraps after 64k).
-uint8_t dl_ctrl_peek( usb_dev_handle* handle, int addr, int timeout ) {
+uint8_t dl_ctrl_peek(usb_dev_handle* handle, int addr) {
 	uint8_t buf[1];
-	usb_control_msg( handle, 0xC0, 0x04, 0x00, addr, (char*)buf, 1, timeout );
+	usb_control_msg(handle, 0xC0, 0x04, 0x00, addr, (char*)buf, 1, USB_TIMEOUT);
 	return buf[0];
 }
 
 // Write one byte of in-device memory.
-void dl_ctrl_poke( usb_dev_handle* handle, int addr, uint8_t value, int timeout ) {
-	usb_control_msg( handle, 0x40, 0x03, 0x00, addr, (char*)&value, 1, timeout );
+void dl_ctrl_poke(usb_dev_handle* handle, int addr, uint8_t value) {
+	usb_control_msg(handle, 0x40, 0x03, 0x00, addr, (char*)&value, 1, USB_TIMEOUT);
 }
 
 // Dump the entire 64k of in-device memory to a file.
-void dl_ctrl_dumpmem( usb_dev_handle* handle, char* f ) {
+void dl_ctrl_dumpmem(usb_dev_handle* handle, char* f) {
 	FILE* dump = fopen(f,"w+");
-	for (int base = 0; base < 0x100; base++) {
-		fprintf(dump,"  register space @ 0x%04x:\n", base<<8 );
-		for (int i = 0; i < 256; i++ ) {
+	int base;
+	for (base = 0; base < 0x100; base++) {
+		fprintf(dump,"  register space @ 0x%04x:\n", base<<8);
+		int i;
+		for (i = 0; i < 256; i++) {
 			if (i % 16 == 0) fprintf(dump,"    ");
-			uint8_t peek = dl_ctrl_peek( handle, (base<<8)+i );
+			uint8_t peek = dl_ctrl_peek(handle, (base<<8)+i);
 			fprintf(dump,"%02hhx ",peek);
 			if (i % 16 == 15) fprintf(dump,"\n");
 		}
@@ -120,50 +128,50 @@ void dl_ctrl_dumpmem( usb_dev_handle* handle, char* f ) {
 }
 
 // Retrieve device status word.
-int dl_ctrl_status( usb_dev_handle* handle, int timeout ) {
+int dl_ctrl_status(usb_dev_handle* handle) {
 	uint8_t buf[4];
-	usb_control_msg( handle, 0xC0, 0x06, 0x00, 0x00, (char*)buf, 4, timeout );
+	usb_control_msg(handle, 0xC0, 0x06, 0x00, 0x00, (char*)buf, 4, USB_TIMEOUT);
 	return (buf[3] << 24) | (buf[2] << 16) | (buf[1] << 8) | buf[0];
 }
 
 // Set encryption key.
-void dl_ctrl_set_key( usb_dev_handle* handle, uint8_t key[16], int timeout ) {
-	usb_control_msg( handle, 0x40, 0x12, 0x00, 0x00, (char*)key, 16, timeout );
+void dl_ctrl_set_key(usb_dev_handle* handle, uint8_t key[16]) {
+	usb_control_msg(handle, 0x40, 0x12, 0x00, 0x00, (char*)key, 16, USB_TIMEOUT);
 }
 
 // Unknown purpose.
-void dl_ctrl_unknown( usb_dev_handle* handle, int timeout ) {
-	usb_control_msg( handle, 0x40, 0x14, 0x00, 0x00, NULL, 0, timeout );
+void dl_ctrl_unknown(usb_dev_handle* handle) {
+	usb_control_msg(handle, 0x40, 0x14, 0x00, 0x00, NULL, 0, USB_TIMEOUT);
 }
 
 // Read EDID from attached display.
-void dl_ctrl_get_edid( usb_dev_handle* handle, uint8_t edid[128], int timeout ) {
+void dl_ctrl_get_edid(usb_dev_handle* handle, uint8_t edid[128]) {
 	uint8_t buf[64];
 	int offset = 0;
-	usb_control_msg( handle, 0xC0, 0x02, offset<<8, 0xA1, (char*)buf, 64, timeout ); memcpy( edid+offset, buf+1, 63 ); offset += 63;
-	usb_control_msg( handle, 0xC0, 0x02, offset<<8, 0xA1, (char*)buf, 64, timeout ); memcpy( edid+offset, buf+1, 63 ); offset += 63;
-	usb_control_msg( handle, 0xC0, 0x02, offset<<8, 0xA1, (char*)buf,  3, timeout ); memcpy( edid+offset, buf+1,  2 ); 
+	usb_control_msg(handle, 0xC0, 0x02, offset<<8, 0xA1, (char*)buf, 64, USB_TIMEOUT); memcpy(edid+offset, buf+1, 63); offset += 63;
+	usb_control_msg(handle, 0xC0, 0x02, offset<<8, 0xA1, (char*)buf, 64, USB_TIMEOUT); memcpy(edid+offset, buf+1, 63); offset += 63;
+	usb_control_msg(handle, 0xC0, 0x02, offset<<8, 0xA1, (char*)buf,  3, USB_TIMEOUT); memcpy(edid+offset, buf+1,  2); 
 }
 
 
 /********************* COMMAND BUFFER *********************/
 
 // Initialize a new command buffer and allocate space.
-void dl_create_stream( dl_cmdstream* cs, int size ) {
-	cs->buffer = (uint8_t*)malloc( size );
+void dl_create_stream(dl_cmdstream* cs, int size) {
+	cs->buffer = (uint8_t*)malloc(size);
 	cs->size = size;
 	cs->pos = cs->bitpos = 0;
 }
 
 // Delete the command buffer.
-void dl_destroy_stream( dl_cmdstream* cs ) {
-	free( cs->buffer );
+void dl_destroy_stream(dl_cmdstream* cs) {
+	free(cs->buffer);
 	cs->size = 0;
 }
 
 // Send a command buffer to the device.
-void dl_send_command( usb_dev_handle* handle, dl_cmdstream* cs, int ep, int timeout ) {
-	usb_bulk_write( handle, ep, (char*)cs->buffer, cs->pos, timeout );
+void dl_send_command(usb_dev_handle* handle, dl_cmdstream* cs, int ep) {
+	usb_bulk_write(handle, ep, (char*)cs->buffer, cs->pos, USB_TIMEOUT);
 	cs->pos = 0;
 }
 
@@ -171,16 +179,16 @@ void dl_send_command( usb_dev_handle* handle, dl_cmdstream* cs, int ep, int time
 /********************* MISC COMMANDS **********************/
 
 // Unknown purpose.
-void dl_cmd_unknown( dl_cmdstream* cs ) {
-	insertb( cs, DL_CMD_START   );
-	insertb( cs, DL_CMD_UNKNOWN );
-	insertb( cs, 0x0B);
+void dl_cmd_unknown(dl_cmdstream* cs) {
+	insertb(cs, DL_CMD_START);
+	insertb(cs, DL_CMD_UNKNOWN);
+	insertb(cs, 0x0B);
 }
 
 // Flush/synchronize/execute all commands up to this point.
-void dl_cmd_sync( dl_cmdstream* cs ) {
-	insertb( cs, DL_CMD_START );
-	insertb( cs, DL_CMD_SYNC  );
+void dl_cmd_sync(dl_cmdstream* cs) {
+	insertb(cs, DL_CMD_START);
+	insertb(cs, DL_CMD_SYNC);
 }
 
 
@@ -199,11 +207,11 @@ uint8_t dl_reg_mode_1600x1200_60[0x1D] = DL_REG_MODE_1600x1200_60;
 uint8_t dl_reg_mode_1920x1080_60[0x1D] = DL_REG_MODE_1920x1080_60;
 
 // Set a single register.
-void dl_reg_set( dl_cmdstream* cs, uint8_t reg, uint8_t val ) {
-	insertb( cs, DL_CMD_START   );
-	insertb( cs, DL_CMD_SET_REG );
-	insertb( cs, reg );
-	insertb( cs, val );
+void dl_reg_set(dl_cmdstream* cs, uint8_t reg, uint8_t val) {
+	insertb(cs, DL_CMD_START);
+	insertb(cs, DL_CMD_SET_REG);
+	insertb(cs, reg);
+	insertb(cs, val);
 }
 
 // LFSR table for internal counter registers
@@ -216,7 +224,8 @@ void dl_init_register_lfsr() {
 	uint16_t poly  = 0x8016; // 0x8016 = 1000 0000 0001 0110 - 16, 5, 3, 2 ^= 16, 14, 13, 11
 	uint16_t value = 0xFFFF;
 
-	for (int i = 0; i < 65536; i++) {
+	int i;
+	for (i = 0; i < 65536; i++) {
 
 		dl_register_lfsr[i] = value;
 
@@ -243,79 +252,80 @@ void dl_init_register_lfsr() {
 }
 
 // Set an LFSR-based 16-bit register pair
-void dl_reg_set_lfsr( dl_cmdstream* cs, uint8_t reg, uint16_t val ) {
+void dl_reg_set_lfsr(dl_cmdstream* cs, uint8_t reg, uint16_t val) {
 	uint16_t res = dl_register_lfsr[val];
-	dl_reg_set( cs, reg,   res >> 8   );
-	dl_reg_set( cs, reg+1, res & 0xFF );
+	dl_reg_set(cs, reg,   res >> 8);
+	dl_reg_set(cs, reg+1, res & 0xFF);
 }
 
 // Set all mode registers at once.
-void dl_reg_set_all( dl_cmdstream* cs, uint8_t values[0x1D] ) {
-	dl_reg_set( cs, DL_REG_SYNC, 0x00 );
-	for (int i = 0; i < 0x1D; i++)
-		dl_reg_set( cs, i, values[i] );
-	dl_reg_set( cs, DL_REG_SYNC, 0xFF );
+void dl_reg_set_all(dl_cmdstream* cs, uint8_t values[0x1D]) {
+	dl_reg_set(cs, DL_REG_SYNC, 0x00);
+	int i;
+	for (i = 0; i < 0x1D; i++)
+		dl_reg_set(cs, i, values[i]);
+	dl_reg_set(cs, DL_REG_SYNC, 0xFF);
 }
 
 
 /******************* ADDRESS REGISTERS ********************/
 
 // Set a single address register.
-void dl_reg_set_address( dl_cmdstream* cs, uint8_t reg, int address ) {
-	dl_reg_set( cs, reg+0, (address >> 16) & 0xFF );
-	dl_reg_set( cs, reg+1, (address >>  8) & 0xFF );
-	dl_reg_set( cs, reg+2, (address      ) & 0xFF );
+void dl_reg_set_address(dl_cmdstream* cs, uint8_t reg, int address) {
+	dl_reg_set(cs, reg+0, (address >> 16) & 0xFF);
+	dl_reg_set(cs, reg+1, (address >>  8) & 0xFF);
+	dl_reg_set(cs, reg+2, (address    ) & 0xFF);
 }
 
 // Set all address registers at once.
-void dl_reg_set_offsets( dl_cmdstream* cs, int start16, int stride16, int start8, int stride8 ) {
-	dl_reg_set( cs, DL_REG_SYNC, 0x00 );
-	dl_reg_set_address( cs, DL_ADDR_FB16_START,  start16  );
-	dl_reg_set_address( cs, DL_ADDR_FB16_STRIDE, stride16 );
-	dl_reg_set_address( cs, DL_ADDR_FB8_START,   start8   );
-	dl_reg_set_address( cs, DL_ADDR_FB8_STRIDE,  stride8  );
-	dl_reg_set( cs, DL_REG_SYNC, 0xFF );
+void dl_reg_set_offsets(dl_cmdstream* cs, int start16, int stride16, int start8, int stride8) {
+	dl_reg_set(cs, DL_REG_SYNC, 0x00);
+	dl_reg_set_address(cs, DL_ADDR_FB16_START,  start16);
+	dl_reg_set_address(cs, DL_ADDR_FB16_STRIDE, stride16);
+	dl_reg_set_address(cs, DL_ADDR_FB8_START,   start8);
+	dl_reg_set_address(cs, DL_ADDR_FB8_STRIDE,  stride8);
+	dl_reg_set(cs, DL_REG_SYNC, 0xFF);
 }
 
 
 /******************* GRAPHICS COMMANDS ********************/
 
 // Insert a generic GFX command into the stream.
-void dl_gfx_base( dl_cmdstream* cs, uint8_t cmd, int addr, uint8_t count ) {
-	insertb( cs, DL_CMD_START );
-	insertb( cs, cmd );
-	inserta( cs, addr );
-	insertb( cs, count );
+void dl_gfx_base(dl_cmdstream* cs, uint8_t cmd, int addr, uint8_t count) {
+	insertb(cs, DL_CMD_START);
+	insertb(cs, cmd);
+	inserta(cs, addr);
+	insertb(cs, count);
 }
 
 // Insert a raw-write command into the stream.
-void dl_gfx_write( dl_cmdstream* cs, int addr, uint8_t count, uint8_t* data ) {
-	dl_gfx_base( cs, DL_GFX_WRITE | DL_GFX_WORD, addr, count );
+void dl_gfx_write(dl_cmdstream* cs, int addr, uint8_t count, uint8_t* data) {
+	dl_gfx_base(cs, DL_GFX_WRITE | DL_GFX_WORD, addr, count);
 	int pcount = (count == 0) ? 256 : count;
-	insert( cs, pcount*2, data );
+	insert(cs, pcount*2, data);
 }
 
 // Insert a RLE-encoded write command into the stream.
-void dl_gfx_rle( dl_cmdstream* cs, int addr, uint8_t count, dl_rle_word* rs ) {
+void dl_gfx_rle(dl_cmdstream* cs, int addr, uint8_t count, dl_rle_word* rs) {
 
-	dl_gfx_base( cs, DL_GFX_RLE | DL_GFX_WORD, addr, count );
+	dl_gfx_base(cs, DL_GFX_RLE | DL_GFX_WORD, addr, count);
 
 	int pcount = (count == 0) ? 256 : count;
 	int i = 0;
 	dl_rle_word* cur = rs;
 
 	while (i < pcount) {
-		insertb( cs, cur->count );
-		insertw( cs, cur->value );
+		insertb(cs, cur->count);
+		insertw(cs, cur->value);
 		i += (cur->count == 0) ? 256: cur->count;
 		cur++;
 	}
 }
 
 // Insert a on-device memcopy command into the stream.
-void dl_gfx_copy( dl_cmdstream* cs, int src_addr, int dst_addr, uint8_t count ) {
-	dl_gfx_base( cs, DL_GFX_COPY | DL_GFX_WORD, dst_addr, count );
-	inserta( cs, src_addr );
+void dl_gfx_copy(dl_cmdstream* cs, int src_addr, int dst_addr, uint8_t count) {
+	dl_gfx_base(cs, DL_GFX_COPY | DL_GFX_WORD, dst_addr, count);
+	inserta(cs, src_addr);
 }
 
 
@@ -838,20 +848,20 @@ uint8_t dl_huffman_device_table[4608] = {
 };
 
 // Set the on-device Huffman table.
-void dl_huffman_set_device_table( dl_cmdstream* cs, int size, uint8_t* buf ) {
+void dl_huffman_set_device_table(dl_cmdstream* cs, int size, uint8_t* buf) {
 
 	if ((size % 9) != 0) return;
 	int count = size / 9;
 
-	insertb( cs, DL_CMD_START   );
-	insertb( cs, DL_CMD_HUFFMAN );
+	insertb(cs, DL_CMD_START);
+	insertb(cs, DL_CMD_HUFFMAN);
 
-	insertd( cs, DL_HUFF_MAGIC ); // magic number
- 	insertd( cs, count );         // count of 9-byte chunks
+	insertd(cs, DL_HUFF_MAGIC); // magic number
+ 	insertd(cs, count);         // count of 9-byte chunks
 
-	insert( cs, size, buf ); // count * 9 bytes
+	insert(cs, size, buf); // count * 9 bytes
 
-	dl_cmd_sync( cs );
+	dl_cmd_sync(cs);
 }
 
 
@@ -869,33 +879,34 @@ dl_huffman_entry dl_huffman_compact[DL_HUFFMAN_SIZE];
 
 
 // Load the userspace Huffman table.
-int dl_huffman_load_table( const char* filename ) {
+int dl_huffman_load_table(const char* filename) {
 	
-	FILE* table = fopen( filename, "r" );
+	FILE* table = fopen(filename, "r");
 	if (!table) return -1;
 
 	// load table into temporary buffer
-	printf( "loading huffman table from %s..\n", filename );
-	uint8_t* buf = (uint8_t*)malloc( DL_HUFFMAN_SIZE*PACKED_SIZE );
-	int res = fread( buf, PACKED_SIZE, DL_HUFFMAN_SIZE, table );
+	printf("loading huffman table from %s..\n", filename);
+	uint8_t* buf = (uint8_t*)malloc(DL_HUFFMAN_SIZE*PACKED_SIZE);
+	int res = fread(buf, PACKED_SIZE, DL_HUFFMAN_SIZE, table);
 	fclose(table);
 
 	// convert to host bit order
-	for (int i = 0; i < DL_HUFFMAN_SIZE; i++) {
+	int i;
+	for (i = 0; i < DL_HUFFMAN_SIZE; i++) {
 		uint8_t* huffentry = buf+(i*PACKED_SIZE);
 		dl_huffman_compact[i].size =  huffentry[0];
 		dl_huffman_compact[i].seq  = (huffentry[1]<<24) | (huffentry[2]<<16) | (huffentry[3]<<8) | (huffentry[4]);
 	}
 
 	// cleanup
-	free( buf );
+	free(buf);
 	if (res != DL_HUFFMAN_SIZE) return -1;
 
 	return 0;
 }
 
 // Append one huffman bit sequence to the stream.
-void dl_huffman_append( dl_cmdstream* cs, int16_t diff ) {
+void dl_huffman_append(dl_cmdstream* cs, int16_t diff) {
 
 	dl_huffman_entry* tmp = dl_huffman_compact+DL_HUFFMAN_COUNT+diff;
 	uint8_t  bitcount = tmp->size;
@@ -937,8 +948,9 @@ void dl_huffman_append( dl_cmdstream* cs, int16_t diff ) {
 #define RESTART_OFFSET 50
 
 // Append one 512-byte block of compressed data to the stream.
-int dl_huffman_compress( dl_cmdstream* cs, int addr, int pcount, uint16_t* pixels, int blocksize ) {
+int dl_huffman_compress(dl_cmdstream* cs, int addr, int pcount, uint16_t* pixels) {
 
+	int blocksize = DL_HUFFMAN_BLOCKSIZE;
 	int pixel = 0;
 	int bpcnt = 0;
 	int start = cs->pos;
@@ -948,15 +960,15 @@ int dl_huffman_compress( dl_cmdstream* cs, int addr, int pcount, uint16_t* pixel
 	uint16_t prev = 0; //if (pixel > 0) prev = pixels[pixel-1];
 
 	// this loop generates sub-blocks of max. 256 pixels
-	while ( ((cs->pos-start) < blocksize-4) && (pixel < pcount) ) {
+	while (((cs->pos-start) < blocksize-4) && (pixel < pcount)) {
 
 		// start a new sub-block if 256 pixels have been encoded or if we are near the end of the big block
-		if ( ((bpcnt % 256) == 0) || ((cs->pos-start >= blocksize-RESTART_OFFSET) && (cs->pos-start <= blocksize-(RESTART_OFFSET-4))) ) {
+		if (((bpcnt % 256) == 0) || ((cs->pos-start >= blocksize-RESTART_OFFSET) && (cs->pos-start <= blocksize-(RESTART_OFFSET-4)))) {
 
 			if (cs->bitpos != 0) { cs->pos++; cs->bitpos = 0; } // don't overwrite the last bits of the previous block
 			if (lastcnt) *lastcnt = bpcnt % 256; // adjust pixel count of previous block
 
-			dl_gfx_base( cs, DL_GFX_WRITE | DL_GFX_WORD | DL_GFX_COMP, addr+2*pixel, 0x00 );
+			dl_gfx_base(cs, DL_GFX_WRITE | DL_GFX_WORD | DL_GFX_COMP, addr+2*pixel, 0x00);
 			lastcnt = &(cs->buffer[cs->pos-1]); // store position of the pixel count value
 
 			bpcnt = 0;
@@ -965,7 +977,7 @@ int dl_huffman_compress( dl_cmdstream* cs, int addr, int pcount, uint16_t* pixel
 
 		uint16_t thispix = pixels[pixel];
 		//int16_t diff = pixels[pixel] - prev;
-		dl_huffman_append( cs, thispix - prev );
+		dl_huffman_append(cs, thispix - prev);
 		prev = thispix;
 		bpcnt++;
 		pixel++;
@@ -980,7 +992,7 @@ int dl_huffman_compress( dl_cmdstream* cs, int addr, int pcount, uint16_t* pixel
 
 	// fix pixel count of the last sub-block
 	if (lastcnt) *lastcnt = bpcnt % 256;
-	dl_reg_set( cs, DL_REG_SYNC, 0xFF );
+	dl_reg_set(cs, DL_REG_SYNC, 0xFF);
 
 	// make sure the next block starts on a byte boundary
 	cs->bitpos = 0;
@@ -993,50 +1005,84 @@ int dl_huffman_compress( dl_cmdstream* cs, int addr, int pcount, uint16_t* pixel
 /**************** INITIALIZATION SEQUENCE *****************/
 
 // Send a default init sequence to a DisplayLink device.
-void dl_init( usb_dev_handle* handle ) {
+void dl_init(usb_dev_handle* handle) {
 
 	uint8_t edid[128];
 	uint8_t peek;
 
 	dl_cmdstream cs;
-	dl_create_stream( &cs, 10*1024 );
+	dl_create_stream(&cs, 10*1024);
 
 	printf("dl_init(): starting DisplayLink initialization..\n");
 
 	// windows driver does this about once a second:
 	// f0005000 seems to be default response
 	// f0002000 sometimes seen when device is messed up
-	int poll = dl_ctrl_status( handle );
-	printf( "  dl_ctrl_status() = 0x%08x\n", poll );
+	int poll = dl_ctrl_status(handle);
+	printf("  dl_ctrl_status() = 0x%08x\n", poll);
 
 	// always seems to return 0x82
-	peek = dl_ctrl_peek( handle, 0xC484 );
-	printf( "  dl_ctrl_peek(0xC484) = 0x%02hhx\n", peek );
+	peek = dl_ctrl_peek(handle, 0xC484);
+	printf("  dl_ctrl_peek(0xC484) = 0x%02hhx\n", peek);
 
 	// original driver does this, but no visible effect
-	printf( "  dl_ctrl_poke(0xC41F,0x01)\n" );
-	dl_ctrl_poke( handle, 0xC41F, 0x01 );
+	printf("  dl_ctrl_poke(0xC41F,0x01)\n");
+	dl_ctrl_poke(handle, 0xC41F, 0x01);
 
-	dl_ctrl_get_edid( handle, edid );
-	printf( "  EDID data:\n" );
-	for (int i = 0; i < 8; i++) {
-		printf( "    " );
-		for (int j = 0; j < 16; j++) printf( "%02hhx ", edid[i*16+j] );
-		printf( "\n" );
+	dl_ctrl_get_edid(handle, edid);
+	printf("  EDID data:\n");
+	int i;
+	for (i = 0; i < 8; i++) {
+		printf("    ");
+		int j;
+		for (j = 0; j < 16; j++) printf("%02hhx ", edid[i*16+j]);
+		printf("\n");
 	}
 
-	printf( "  setting decryption null-key..\n" );
-	dl_ctrl_set_key( handle, dl_crypt_nullkey );
+	printf("  setting decryption null-key..\n");
+	dl_ctrl_set_key(handle, dl_crypt_nullkey);
 
 	// original driver does this, but no visible effect
-	printf( "  dl_poke(0xC40B,0x00)\n" );
-	dl_ctrl_poke( handle, 0xC40B, 0x00 );
+	printf("  dl_poke(0xC40B,0x00)\n");
+	dl_ctrl_poke(handle, 0xC40B, 0x00);
 	
-	printf( "  sending decompressor table (%d bytes)..\n", sizeof(dl_huffman_device_table) );
-	dl_huffman_set_device_table( &cs, sizeof(dl_huffman_device_table), dl_huffman_device_table );
-	dl_send_command( handle, &cs );
+	printf("  sending decompressor table (%d bytes)..\n", sizeof(dl_huffman_device_table));
+	dl_huffman_set_device_table(&cs, sizeof(dl_huffman_device_table), dl_huffman_device_table);
+	dl_send_command(handle, &cs, 1);
 
 	printf("dl_init(): initialization done.\n\n");
-	dl_destroy_stream( &cs );
+	dl_destroy_stream(&cs);
 }
 
+
+// Insert one byte into the command buffer.
+void insertb(dl_cmdstream* cs, uint8_t val) {
+	cs->buffer[cs->pos++] = val;
+}
+
+// Insert one word into the command buffer.
+void insertw(dl_cmdstream* cs, uint16_t val) {
+	insertb(cs, (val >> 8) & 0xFF);
+	insertb(cs, (val) & 0xFF);
+}
+
+// Insert an device memory address into the command buffer.
+void inserta(dl_cmdstream* cs, uint32_t address) {
+	insertb(cs, (address >> 16) & 0xFF);
+	insertb(cs, (address >>  8) & 0xFF);
+	insertb(cs, (address) & 0xFF);
+}
+
+// Insert a doubleword into the command buffer.
+void insertd(dl_cmdstream* cs, uint32_t val) {
+	insertb(cs, (val >> 24) & 0xFF);
+	insertb(cs, (val >> 16) & 0xFF);
+	insertb(cs, (val >> 8) & 0xFF);
+	insertb(cs, (val) & 0xFF);
+}
+
+// Insert a sequence of bytes into the command buffer.
+void insert(dl_cmdstream* cs, int size, uint8_t* buf) {
+	memcpy(cs->buffer+cs->pos, buf, size);
+	cs->pos += size;
+}

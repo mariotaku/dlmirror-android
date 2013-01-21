@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 	dl_reg_set(&cs, DL_REG_BLANK_SCREEN, 0x00); // enable output
 	dl_reg_set(&cs, DL_REG_SYNC, 0xFF);
 	dl_cmd_sync(&cs);
-	dl_send_command(handle, &cs);
+	dl_send_command(handle, &cs, 1);
 
 	sleep(1);
 
@@ -48,17 +48,20 @@ int main(int argc, char* argv[]) {
 	printf("goodbye.\n");
 	dl_destroy_stream(&cs);
 	usb_close(handle);
+	return(0);
 }
 
 void clear_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	dl_rle_word black = { 0x00, 0x0000 };
-	for (int i = 0; i < YRES; i++) {
-		for (int j = 0; j < XRES; j += 256) {
+	int i;
+	for (i = 0; i < YRES; i++) {
+		int j;
+		for (j = 0; j < XRES; j += 256) {
 			dl_gfx_rle(cs, i * XRES * 2 + j * 2, 0, &black);
 		}
 	}
 	dl_cmd_sync(cs);
-	dl_send_command(handle, cs);
+	dl_send_command(handle, cs, 1);
 }
 
 void show_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
@@ -93,7 +96,7 @@ void show_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	printf( "encoded %d bytes\n",cs->pos);
 	
 	dl_cmd_sync(cs);
-	dl_send_command(handle, cs);
+	dl_send_command(handle, cs, 1);
 }
 
 void write_pixel(dl_cmdstream* cs, int y, int x, dl_rle_word* color) {
@@ -114,11 +117,10 @@ void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	//int fps;
 	while (1) {
 		FILE* stream = popen(SCREENCAP_COMMAND, "r");
-		for (int i = 0; i < 3; i++) {
+		int i;
+		for (i = -3; i < screen_size; i++) {
 			fread(&pixel, 4, 1, stream);
-		}
-		for (int i = 0; i < screen_size; i++) {
-			fread(&pixel, 4, 1, stream);
+			if (i < 0) continue;
 			if (pixel != image[i]) {
 				image[i] = pixel;
 				int y = YRES - (pv + i % w);
@@ -129,7 +131,7 @@ void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 		}
 		pclose(stream);
 		dl_cmd_sync(cs);
-		dl_send_command(handle, cs);
+		dl_send_command(handle, cs, 1);
 		printf("drawed 1 frame\n");
 	
 	}

@@ -31,6 +31,7 @@
 
 #include "usb.h"
 
+#define USB_TIMEOUT 1000
 
 /******************** ENCRYPTION STUFF ********************/
 
@@ -45,36 +46,36 @@ extern uint16_t dl_crypt_ofsbuffer[0x1000];
 // Generate a CRC12 over len bytes of data. Generator polynom:
 // x^12 + x^11 + x^3 + x^2 + x + 1 = 0001 1000 0000 1111 = 0x180F
 #define DL_CRYPT_CRC12 0x180F
-int dl_crypt_crc12( uint8_t* data, int len ); 
+int dl_crypt_crc12(uint8_t* data, int len); 
 
 // Fill key buffer and reverse-mapping buffer with pseudorandom numbers.
-// x^12 + x^6 + x^4 + x = 0000 1000 0010 1001 = 0x0829 ( 12, 6, 4, 1 ^= 12, 11, 8, 6 )
+// x^12 + x^6 + x^4 + x = 0000 1000 0010 1001 = 0x0829 (12, 6, 4, 1 ^= 12, 11, 8, 6)
 #define DL_CRYPT_LFSR12 0x0829
-void dl_crypt_generate_key( uint8_t key[0x11000], uint16_t map[0x1000] );
+void dl_crypt_generate_key(uint8_t key[0x11000], uint16_t map[0x1000]);
 
 
 /********************* CONTROL STUFF **********************/
 
 // Read one byte of in-device memory (wraps after 64k).
-uint8_t dl_ctrl_peek( usb_dev_handle *handle, int addr, int timeout = 1000 );
+uint8_t dl_ctrl_peek(usb_dev_handle *handle, int addr);
 
 // Write one byte of in-device memory.
-void dl_ctrl_poke( usb_dev_handle *handle, int addr, uint8_t value, int timeout = 1000 );
+void dl_ctrl_poke(usb_dev_handle *handle, int addr, uint8_t value);
 
 // Dump the entire 64k of in-device memory to a file.
-void dl_ctrl_dumpmem( usb_dev_handle *handle, char* f ); 
+void dl_ctrl_dumpmem(usb_dev_handle *handle, char* f); 
 
 // Retrieve device status word.
-int dl_ctrl_status( usb_dev_handle *handle, int timeout = 1000 );
+int dl_ctrl_status(usb_dev_handle *handle);
 
 // Set encryption key.
-void dl_ctrl_set_key( usb_dev_handle *handle, uint8_t key[16], int timeout = 1000 );
+void dl_ctrl_set_key(usb_dev_handle *handle, uint8_t key[16]);
 
 // Unknown purpose.
-void dl_ctrl_unknown( usb_dev_handle *handle, int timeout = 1000 ); 
+void dl_ctrl_unknown(usb_dev_handle *handle); 
 
 // Read EDID from attached display.
-void dl_ctrl_get_edid( usb_dev_handle *handle, uint8_t edid[128], int timeout = 1000 );
+void dl_ctrl_get_edid(usb_dev_handle *handle, uint8_t edid[128]);
 
 
 /********************* COMMAND BUFFER *********************/
@@ -87,45 +88,28 @@ typedef struct {
 
 
 // Initialize a new command buffer and allocate space.
-void dl_create_stream( dl_cmdstream* cs, int size );
+void dl_create_stream(dl_cmdstream* cs, int size);
 
 // Delete the command buffer.
-void dl_destroy_stream( dl_cmdstream* cs );
+void dl_destroy_stream(dl_cmdstream* cs);
 
 // Send a command buffer to the device.
-void dl_send_command( usb_dev_handle *handle, dl_cmdstream* cs, int ep = 1, int timeout = 1000 ); 
+void dl_send_command(usb_dev_handle *handle, dl_cmdstream* cs, int ep); 
 
 // Insert one byte into the command buffer.
-inline void insertb( dl_cmdstream* cs, uint8_t val ) {
-	cs->buffer[cs->pos++] = val;
-}
+void insertb(dl_cmdstream* cs, uint8_t val);
 
 // Insert one word into the command buffer.
-inline void insertw( dl_cmdstream* cs, uint16_t val ) {
-	insertb( cs, (val >> 8) & 0xFF );
-	insertb( cs, (val) & 0xFF );
-}
+void insertw(dl_cmdstream* cs, uint16_t val);
 
 // Insert an device memory address into the command buffer.
-inline void inserta( dl_cmdstream* cs, uint32_t address ) {
-	insertb( cs, (address >> 16) & 0xFF );
-	insertb( cs, (address >>  8) & 0xFF );
-	insertb( cs, (address) & 0xFF );
-}
+void inserta(dl_cmdstream* cs, uint32_t address);
 
 // Insert a doubleword into the command buffer.
-inline void insertd( dl_cmdstream* cs, uint32_t val ) {
-	insertb( cs, (val >> 24) & 0xFF );
-	insertb( cs, (val >> 16) & 0xFF );
-	insertb( cs, (val >> 8) & 0xFF );
-	insertb( cs, (val) & 0xFF );
-}
+void insertd(dl_cmdstream* cs, uint32_t val);
 
 // Insert a sequence of bytes into the command buffer.
-inline void insert( dl_cmdstream* cs, int size, uint8_t* buf ) {
-	memcpy( cs->buffer+cs->pos, buf, size );
-	cs->pos += size;
-}
+void insert(dl_cmdstream* cs, int size, uint8_t* buf);
 
 
 /************************ COMMANDS ************************/
@@ -143,10 +127,10 @@ inline void insert( dl_cmdstream* cs, int size, uint8_t* buf ) {
 /********************* MISC COMMANDS **********************/
 
 // Unknown purpose.
-void dl_cmd_unknown( dl_cmdstream* cs );
+void dl_cmd_unknown(dl_cmdstream* cs);
 
 // Flush/synchronize/execute all commands up to this point.
-void dl_cmd_sync( dl_cmdstream* cs );
+void dl_cmd_sync(dl_cmdstream* cs);
 
 
 /******************* REGISTER COMMANDS ********************/
@@ -203,7 +187,7 @@ void dl_cmd_sync( dl_cmdstream* cs );
 
 
 // Set a single register.
-void dl_reg_set( dl_cmdstream* cs, uint8_t reg, uint8_t val );
+void dl_reg_set(dl_cmdstream* cs, uint8_t reg, uint8_t val);
 
 // LFSR table for internal counter registers
 extern uint16_t dl_register_lfsr[65536];
@@ -212,10 +196,10 @@ extern uint16_t dl_register_lfsr[65536];
 void dl_init_register_lfsr();
 
 // Set an LFSR-based 16-bit register pair
-void dl_reg_set_lfsr( dl_cmdstream* cs, uint8_t reg, uint16_t val );
+void dl_reg_set_lfsr(dl_cmdstream* cs, uint8_t reg, uint16_t val);
 
 // Set all mode registers at once.
-void dl_reg_set_all( dl_cmdstream* cs, uint8_t values[0x1D] );
+void dl_reg_set_all(dl_cmdstream* cs, uint8_t values[0x1D]);
 
 
 // Convenience macros for the mode array name
@@ -287,10 +271,10 @@ extern uint8_t dl_reg_mode_1920x1080_60[0x1D];
 #define DL_ADDR_FB8_STRIDE  0x29 // 8-bit stride = 1*xres
 
 // Set a single address register.
-void dl_reg_set_address( dl_cmdstream* cs, uint8_t reg, int address );
+void dl_reg_set_address(dl_cmdstream* cs, uint8_t reg, int address);
 
 // Set all address registers at once.
-void dl_reg_set_offsets( dl_cmdstream* cs, int start16, int stride16, int start8, int stride8 );
+void dl_reg_set_offsets(dl_cmdstream* cs, int start16, int stride16, int start8, int stride8);
 
 
 /******************* GRAPHICS COMMANDS ********************/
@@ -304,10 +288,10 @@ void dl_reg_set_offsets( dl_cmdstream* cs, int start16, int stride16, int start8
 #define DL_GFX_COPY  (DL_GFX_BASE | 0x02) // internal copy
 
 // Insert a generic GFX command into the stream.
-void dl_gfx_base( dl_cmdstream* cs, uint8_t cmd, int addr, uint8_t count ); 
+void dl_gfx_base(dl_cmdstream* cs, uint8_t cmd, int addr, uint8_t count); 
 
 // Insert a raw-write command into the stream.
-void dl_gfx_write( dl_cmdstream* cs, int addr, uint8_t count, uint8_t* data );
+void dl_gfx_write(dl_cmdstream* cs, int addr, uint8_t count, uint8_t* data);
 
 // Descriptor for RLE-encoded data.
 typedef struct {
@@ -316,10 +300,10 @@ typedef struct {
 } dl_rle_word;
 
 // Insert a RLE-encoded write command into the stream.
-void dl_gfx_rle( dl_cmdstream* cs, int addr, uint8_t count, dl_rle_word* rs );
+void dl_gfx_rle(dl_cmdstream* cs, int addr, uint8_t count, dl_rle_word* rs);
 
 // Insert a on-device memcopy command into the stream.
-void dl_gfx_copy( dl_cmdstream* cs, int src_addr, int dst_addr, uint8_t count );
+void dl_gfx_copy(dl_cmdstream* cs, int src_addr, int dst_addr, uint8_t count);
 
 
 /****************** COMPRESSION COMMANDS ******************/
@@ -334,19 +318,19 @@ void dl_gfx_copy( dl_cmdstream* cs, int src_addr, int dst_addr, uint8_t count );
 extern uint8_t dl_huffman_device_table[4608];
 
 // Set the on-device Huffman table.
-void dl_huffman_set_device_table( dl_cmdstream* cs, int size, uint8_t* buf );
+void dl_huffman_set_device_table(dl_cmdstream* cs, int size, uint8_t* buf);
 
 // Load the userspace Huffman table.
-int dl_huffman_load_table( const char* filename );
+int dl_huffman_load_table(const char* filename);
 
 // Append one huffman bit sequence to the stream.
-void dl_huffman_append( dl_cmdstream* cs, int16_t value );
+void dl_huffman_append(dl_cmdstream* cs, int16_t value);
 
 // Append one 512-byte block of compressed data to the stream.
-int dl_huffman_compress( dl_cmdstream* cs, int addr, int pcount, uint16_t* pixels, int blocksize = DL_HUFFMAN_BLOCKSIZE );
+int dl_huffman_compress(dl_cmdstream* cs, int addr, int pcount, uint16_t* pixels);
 
 /**************** INITIALIZATION SEQUENCE *****************/
 
 // Send a default init sequence to a DisplayLink device.
-void dl_init( usb_dev_handle *handle ); 
+void dl_init(usb_dev_handle *handle); 
 
