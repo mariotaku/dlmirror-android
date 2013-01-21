@@ -47,60 +47,30 @@ usb_dev_handle* dl_get_supported_device_handle() {
 	return handle;
 }
 
-void rgb24_to_rgb16(uint8_t* rgb24, uint8_t* rgb16, int count) {
+void rgb888_to_rgb565(uint8_t* rgb888, uint8_t* rgb565, int count) {
 	int i;
 	for (i = 0; i < count; i++) {
-		unsigned int r = rgb24[i*3+0], g = rgb24[i*3+1], b = rgb24[i*3+2];
-		rgb16[i*2+1] = (r & 0xF8) | ((g & 0xE0) >> 5);
-		rgb16[i*2+0] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		unsigned int r = rgb888[i * 3 + 0], g = rgb888[i * 3 + 1], b = rgb888[i * 3 + 2];
+		rgb565[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
+		rgb565[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
 	}
 }
 
-void rgba32_to_rgb16(uint8_t* rgba32, uint8_t* rgb16, int count) {
+void rgba8888_to_rgb565_8(uint32_t* rgba8888, uint8_t* rgb565, int count) {
 	int i;
 	for (i = 0; i < count; i++) {
-		unsigned int r = rgba32[i*4+0], g = rgba32[i*4+1], b = rgba32[i*4+2];
-		rgb16[i*2+1] = (r & 0xF8) | ((g & 0xE0) >> 5);
-		rgb16[i*2+0] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
-	}
-}
-
-void screencap_to_rgb16(uint32_t* rgba32, uint16_t* rgb16, int count) {
-	int i;
-	for (i = 0; i < count; i++) {
-		uint32_t pixel = rgba32[i]; 
+		uint32_t pixel = rgba8888[i];
 		unsigned int r = pixel & 0xFF, g = (pixel >> 8) & 0xFF, b = (pixel >> 16) & 0xFF;
-		rgb16[i*2+1] = (r & 0xF8) | ((g & 0xE0) >> 5);
-		rgb16[i*2+0] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		rgb565[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
+		rgb565[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
 	}
 }
 
-void windows_rgb24_to_rgb16(uint8_t* rgb24, uint8_t* rgb16, int count) {
+void rgba8888_to_rgb565_16(uint32_t* rgba8888, uint16_t* rgb565, int count) {
 	int i;
 	for (i = 0; i < count; i++) {
-		unsigned int g = rgb24[(count - i) * 3 - 2], r = rgb24[(count - i) * 3 - 1], b = rgb24[(count - i) * 3 - 0];
-		rgb16[i*2+1] = (r & 0xF8) | ((g & 0xE0) >> 5);
-		rgb16[i*2+0] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		rgb565[i] = color_rgba8888_to_rgb565(rgba8888[i]);
 	}
-}
-
-void read_rgb24(const char* filename, uint8_t* rgb24, int count) {
-	int f = open(filename,O_RDONLY);
-	lseek(f, 54, SEEK_SET);
-	read(f, rgb24, count*3);
-	close(f);
-}
-
-uint8_t* read_rgb16(const char* filename, int count) {
-
-	uint8_t* rgb16 = (uint8_t*)malloc(count * 2);
-	uint8_t* rgb24 = (uint8_t*)malloc(count * 3);
-
-	read_rgb24(filename, rgb24, count);
-	windows_rgb24_to_rgb16(rgb24, rgb16, count);
-
-	free(rgb24);
-	return rgb16;
 }
 
 uint16_t color_rgba8888_to_rgb565(uint32_t rgba32) {

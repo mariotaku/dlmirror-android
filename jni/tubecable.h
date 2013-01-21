@@ -94,7 +94,7 @@ void dl_create_stream(dl_cmdstream* cs, int size);
 void dl_destroy_stream(dl_cmdstream* cs);
 
 // Send a command buffer to the device.
-void dl_send_command(usb_dev_handle *handle, dl_cmdstream* cs, int ep); 
+int dl_send_command(usb_dev_handle *handle, dl_cmdstream* cs, int ep); 
 
 // Insert one byte into the command buffer.
 void insertb(dl_cmdstream* cs, uint8_t val);

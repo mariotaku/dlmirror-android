@@ -170,9 +170,10 @@ void dl_destroy_stream(dl_cmdstream* cs) {
 }
 
 // Send a command buffer to the device.
-void dl_send_command(usb_dev_handle* handle, dl_cmdstream* cs, int ep) {
-	usb_bulk_write(handle, ep, (char*)cs->buffer, cs->pos, USB_TIMEOUT);
+int dl_send_command(usb_dev_handle* handle, dl_cmdstream* cs, int ep) {
+	int ret = usb_bulk_write(handle, ep, (char*)cs->buffer, cs->pos, USB_TIMEOUT);
 	cs->pos = 0;
+	return ret;
 }
 
 

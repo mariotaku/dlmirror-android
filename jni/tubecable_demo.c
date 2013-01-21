@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
 	dl_create_stream(&cs, XRES * YRES * 8);
 
 	// load huffman table
-	dl_huffman_load_table("/sdcard/tubecable_huffman.bin");
+	dl_huffman_load_table("/home/mariotaku/tubecable_huffman.bin");
 
 	usb_dev_handle* handle = dl_get_supported_device_handle();
 
@@ -73,11 +73,12 @@ void show_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	int screen_size = w * h;
 	int data_size = screen_size * bpp;
 	uint32_t* image = (uint32_t*) malloc(data_size);
-	uint16_t* image16 = (uint16_t*) malloc(data_size);
+	uint8_t* image8 = (uint8_t*) malloc(screen_size * 2);
 	do_screencap(image, data_size);
 	printf("convert to rgb16...\n");
-	screencap_to_rgb16(image, image16, screen_size);
+	rgba8888_to_rgb565_8(image, image8, screen_size);
 	free(image);
+	uint16_t* image16 = (uint16_t*) image8;
 
 	int myaddr = 0;
 	int mypcnt = 0;
@@ -108,32 +109,55 @@ void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	int w = info.width, h = info.height, f = info.format;
 	int rw = h, rh = w;
 	int pv = (YRES - rh) / 2, ph = (XRES - rw) / 2;
-	int screen_size = w * h, bpp = get_byte_per_pixel(f);
-	int data_size = screen_size * bpp;
+	int image_size = w * h, bpp = get_byte_per_pixel(f);
+	int data_size = image_size * bpp;
 	uint32_t* image = (uint32_t*) malloc(data_size);
-	uint32_t pixel = 0;
-	//dl_rle_word* rle_buf = (dl_rle_word*) malloc(256 * 4);
-	dl_rle_word color = {0x01, 0x0000};
-	//int fps;
-	while (1) {
-		FILE* stream = popen(SCREENCAP_COMMAND, "r");
-		int i;
-		for (i = -3; i < screen_size; i++) {
-			fread(&pixel, 4, 1, stream);
-			if (i < 0) continue;
-			if (pixel != image[i]) {
-				image[i] = pixel;
-				int y = YRES - (pv + i % w);
-				int x = i / w + ph;
-				color.value = color_rgba8888_to_rgb565(pixel);
-				write_pixel(cs, y, x, &color);
+	uint32_t* pixbuf32 = (uint32_t*) malloc(256 * bpp);
+	//uint16_t* pixbuf16 = (uint16_t*) malloc(256 * bpp);
+	uint8_t* pixbuf8 = (uint8_t*) malloc(256 * 2);
+	while(1) {
+		do_screencap(image, data_size);
+		//dl_reg_set(cs, DL_REG_SYNC, 0xFF);
+		int y;
+		for (y = 0; y < rh; y++) {
+			int x;
+			for (x = 0; x < rw; x+= 256) {
+				int pcount = rw - x > 256 ? 256 : rw - x;
+				int c;
+				for (c = 0; c < pcount; c++) {
+					pixbuf32[c] = image[(x + c) * rh + y];
+				}
+				//rgba8888_to_rgb565_16(pixbuf32, pixbuf16, pcount);
+				rgba8888_to_rgb565_8(pixbuf32, pixbuf8, pcount);
+				int sx = ph + x, sy = YRES - (pv + y);
+				dl_gfx_write(cs, sy * XRES * 2 + sx * 2, pcount, pixbuf8);
+				//dl_huffman_compress(cs, sy * XRES * 2 + sx * 2, pcount, pixbuf16);
 			}
 		}
-		pclose(stream);
 		dl_cmd_sync(cs);
 		dl_send_command(handle, cs, 1);
 		printf("drawed 1 frame\n");
-	
 	}
+//	uint32_t pixel = 0;
+//	dl_rle_word color = {0x01, 0x0000};
+//	while (1) {
+//		FILE* stream = popen(SCREENCAP_COMMAND, "r");
+//		int i;
+//		for (i = -3; i < screen_size; i++) {
+//			fread(&pixel, 4, 1, stream);
+//			if (i < 0) continue;
+//			if (pixel != image[i]) {
+//				image[i] = pixel;
+//				int y = YRES - (pv + i % w);
+//				int x = i / w + ph;
+//				color.value = color_rgba8888_to_rgb565(pixel);
+//				write_pixel(cs, y, x, &color);
+//			}
+//		}
+//		pclose(stream);
+//		dl_cmd_sync(cs);
+//		dl_send_command(handle, cs, 1);
+//		printf("drawed 1 frame\n");	
+//	}
 	free(image);
 }
