@@ -97,19 +97,19 @@ void dl_destroy_stream(dl_cmdstream* cs);
 int dl_send_command(usb_dev_handle *handle, dl_cmdstream* cs, int ep); 
 
 // Insert one byte into the command buffer.
-void insertb(dl_cmdstream* cs, uint8_t val);
+void dl_insert_byte(dl_cmdstream* cs, uint8_t val);
 
 // Insert one word into the command buffer.
-void insertw(dl_cmdstream* cs, uint16_t val);
+void dl_insert_word(dl_cmdstream* cs, uint16_t val);
 
 // Insert an device memory address into the command buffer.
-void inserta(dl_cmdstream* cs, uint32_t address);
+void dl_insert_address(dl_cmdstream* cs, uint32_t address);
 
 // Insert a doubleword into the command buffer.
-void insertd(dl_cmdstream* cs, uint32_t val);
+void dl_insert_double(dl_cmdstream* cs, uint32_t val);
 
 // Insert a sequence of bytes into the command buffer.
-void insert(dl_cmdstream* cs, int size, uint8_t* buf);
+void dl_insert(dl_cmdstream* cs, int size, uint8_t* buf);
 
 
 /************************ COMMANDS ************************/

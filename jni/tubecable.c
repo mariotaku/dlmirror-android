@@ -181,15 +181,15 @@ int dl_send_command(usb_dev_handle* handle, dl_cmdstream* cs, int ep) {
 
 // Unknown purpose.
 void dl_cmd_unknown(dl_cmdstream* cs) {
-	insertb(cs, DL_CMD_START);
-	insertb(cs, DL_CMD_UNKNOWN);
-	insertb(cs, 0x0B);
+	dl_insert_byte(cs, DL_CMD_START);
+	dl_insert_byte(cs, DL_CMD_UNKNOWN);
+	dl_insert_byte(cs, 0x0B);
 }
 
 // Flush/synchronize/execute all commands up to this point.
 void dl_cmd_sync(dl_cmdstream* cs) {
-	insertb(cs, DL_CMD_START);
-	insertb(cs, DL_CMD_SYNC);
+	dl_insert_byte(cs, DL_CMD_START);
+	dl_insert_byte(cs, DL_CMD_SYNC);
 }
 
 
@@ -209,10 +209,10 @@ uint8_t dl_reg_mode_1920x1080_60[0x1D] = DL_REG_MODE_1920x1080_60;
 
 // Set a single register.
 void dl_reg_set(dl_cmdstream* cs, uint8_t reg, uint8_t val) {
-	insertb(cs, DL_CMD_START);
-	insertb(cs, DL_CMD_SET_REG);
-	insertb(cs, reg);
-	insertb(cs, val);
+	dl_insert_byte(cs, DL_CMD_START);
+	dl_insert_byte(cs, DL_CMD_SET_REG);
+	dl_insert_byte(cs, reg);
+	dl_insert_byte(cs, val);
 }
 
 // LFSR table for internal counter registers
@@ -293,17 +293,17 @@ void dl_reg_set_offsets(dl_cmdstream* cs, int start16, int stride16, int start8,
 
 // Insert a generic GFX command into the stream.
 void dl_gfx_base(dl_cmdstream* cs, uint8_t cmd, int addr, uint8_t count) {
-	insertb(cs, DL_CMD_START);
-	insertb(cs, cmd);
-	inserta(cs, addr);
-	insertb(cs, count);
+	dl_insert_byte(cs, DL_CMD_START);
+	dl_insert_byte(cs, cmd);
+	dl_insert_address(cs, addr);
+	dl_insert_byte(cs, count);
 }
 
 // Insert a raw-write command into the stream.
 void dl_gfx_write(dl_cmdstream* cs, int addr, uint8_t count, uint8_t* data) {
 	dl_gfx_base(cs, DL_GFX_WRITE | DL_GFX_WORD, addr, count);
 	int pcount = (count == 0) ? 256 : count;
-	insert(cs, pcount*2, data);
+	dl_insert(cs, pcount*2, data);
 }
 
 // Insert a RLE-encoded write command into the stream.
@@ -316,8 +316,8 @@ void dl_gfx_rle(dl_cmdstream* cs, int addr, uint8_t count, dl_rle_word* rs) {
 	dl_rle_word* cur = rs;
 
 	while (i < pcount) {
-		insertb(cs, cur->count);
-		insertw(cs, cur->value);
+		dl_insert_byte(cs, cur->count);
+		dl_insert_word(cs, cur->value);
 		i += (cur->count == 0) ? 256: cur->count;
 		cur++;
 	}
@@ -326,7 +326,7 @@ void dl_gfx_rle(dl_cmdstream* cs, int addr, uint8_t count, dl_rle_word* rs) {
 // Insert a on-device memcopy command into the stream.
 void dl_gfx_copy(dl_cmdstream* cs, int src_addr, int dst_addr, uint8_t count) {
 	dl_gfx_base(cs, DL_GFX_COPY | DL_GFX_WORD, dst_addr, count);
-	inserta(cs, src_addr);
+	dl_insert_address(cs, src_addr);
 }
 
 
@@ -854,13 +854,13 @@ void dl_huffman_set_device_table(dl_cmdstream* cs, int size, uint8_t* buf) {
 	if ((size % 9) != 0) return;
 	int count = size / 9;
 
-	insertb(cs, DL_CMD_START);
-	insertb(cs, DL_CMD_HUFFMAN);
+	dl_insert_byte(cs, DL_CMD_START);
+	dl_insert_byte(cs, DL_CMD_HUFFMAN);
 
-	insertd(cs, DL_HUFF_MAGIC); // magic number
- 	insertd(cs, count);         // count of 9-byte chunks
+	dl_insert_double(cs, DL_HUFF_MAGIC); // magic number
+ 	dl_insert_double(cs, count);         // count of 9-byte chunks
 
-	insert(cs, size, buf); // count * 9 bytes
+	dl_insert(cs, size, buf); // count * 9 bytes
 
 	dl_cmd_sync(cs);
 }
@@ -1057,33 +1057,33 @@ void dl_init(usb_dev_handle* handle) {
 
 
 // Insert one byte into the command buffer.
-void insertb(dl_cmdstream* cs, uint8_t val) {
+void dl_insert_byte(dl_cmdstream* cs, uint8_t val) {
 	cs->buffer[cs->pos++] = val;
 }
 
 // Insert one word into the command buffer.
-void insertw(dl_cmdstream* cs, uint16_t val) {
-	insertb(cs, (val >> 8) & 0xFF);
-	insertb(cs, (val) & 0xFF);
+void dl_insert_word(dl_cmdstream* cs, uint16_t val) {
+	dl_insert_byte(cs, (val >> 8) & 0xFF);
+	dl_insert_byte(cs, (val) & 0xFF);
 }
 
 // Insert an device memory address into the command buffer.
-void inserta(dl_cmdstream* cs, uint32_t address) {
-	insertb(cs, (address >> 16) & 0xFF);
-	insertb(cs, (address >>  8) & 0xFF);
-	insertb(cs, (address) & 0xFF);
+void dl_insert_address(dl_cmdstream* cs, uint32_t address) {
+	dl_insert_byte(cs, (address >> 16) & 0xFF);
+	dl_insert_byte(cs, (address >>  8) & 0xFF);
+	dl_insert_byte(cs, (address) & 0xFF);
 }
 
 // Insert a doubleword into the command buffer.
-void insertd(dl_cmdstream* cs, uint32_t val) {
-	insertb(cs, (val >> 24) & 0xFF);
-	insertb(cs, (val >> 16) & 0xFF);
-	insertb(cs, (val >> 8) & 0xFF);
-	insertb(cs, (val) & 0xFF);
+void dl_insert_double(dl_cmdstream* cs, uint32_t val) {
+	dl_insert_byte(cs, (val >> 24) & 0xFF);
+	dl_insert_byte(cs, (val >> 16) & 0xFF);
+	dl_insert_byte(cs, (val >> 8) & 0xFF);
+	dl_insert_byte(cs, (val) & 0xFF);
 }
 
 // Insert a sequence of bytes into the command buffer.
-void insert(dl_cmdstream* cs, int size, uint8_t* buf) {
+void dl_insert(dl_cmdstream* cs, int size, uint8_t* buf) {
 	memcpy(cs->buffer+cs->pos, buf, size);
 	cs->pos += size;
 }

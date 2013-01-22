@@ -28,6 +28,6 @@ typedef struct {
 
 screencap_info get_screencap_info();
 
-void do_screencap(uint32_t* buffer, int data_size);
+void do_screencap(void* buffer, int data_size);
 
 int get_byte_per_pixel(int format);
