@@ -33,3 +33,5 @@ uint16_t color_rgba8888_to_rgb565(uint32_t rgba32);
 void scale_rgba8888(uint32_t* in, uint32_t* out, int w, int h, int scale);
 
 void rotate_scale_rgba8888(uint32_t* in, uint32_t* out, int w, int h, int scale);
+
+void rotate_bitmap32(uint32_t *in, uint32_t *out, int w, int h, int rotate);

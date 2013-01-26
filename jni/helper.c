@@ -99,3 +99,39 @@ void rotate_scale_rgba8888(uint32_t* in, uint32_t* out, int w, int h, int scale)
 		out[rw * ry / (scale * scale) + rx / scale] = in[i];
 	}
 }
+
+void rotate_bitmap32(uint32_t *in, uint32_t *out, int w, int h, int rotate) {
+	int cos, sin;
+	switch (rotate) {
+		case 0:
+			cos = 1;
+			sin = 0;
+			break;
+		case 90:
+			cos = 0;
+			sin = 1;
+			break;
+		case 180:
+			cos = -1;
+			sin = 0;
+			break;
+		case 270:
+			cos = -1;
+			sin = 0;
+			break;
+		default:
+			//show some errors here.
+			return;
+	}
+	int y, xr, yr;
+	for (y = 0; y <= h; y++) {
+		xr = (- w / 2) * cos + (h / 2) * sin + w / 2;
+		yr = (h / 2) * cos - (-w / 2) * sin + h / 2;
+		int x;
+		for (x = 0; x <= w; x++) {
+			out[yr * w + xr] = in[y * h + x];
+			xr += cos;
+			yr -= sin;
+		}
+	}
+}

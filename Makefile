@@ -4,7 +4,7 @@ CFLAGS=-c -Wall
 all: tubecable
 
 tubecable: tubecable.o helper.o android_screencap.o tubecable_demo.o
-	$(CC) tubecable.o helper.o android_screencap.o tubecable_demo.o -lusb -s -o bin/tubecable 
+	$(CC) tubecable.o helper.o android_screencap.o tubecable_demo.o -lusb -lpthread -s -o bin/tubecable 
 
 tubecable.o: jni/tubecable.c
 	$(CC) $(CFLAGS) jni/tubecable.c 

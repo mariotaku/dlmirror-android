@@ -303,7 +303,7 @@ void dl_gfx_base(dl_cmdstream* cs, uint8_t cmd, int addr, uint8_t count) {
 void dl_gfx_write(dl_cmdstream* cs, int addr, uint8_t count, uint8_t* data) {
 	dl_gfx_base(cs, DL_GFX_WRITE | DL_GFX_WORD, addr, count);
 	int pcount = (count == 0) ? 256 : count;
-	dl_insert(cs, pcount*2, data);
+	dl_insert(cs, pcount * 2, data);
 }
 
 // Insert a RLE-encoded write command into the stream.
@@ -894,9 +894,9 @@ int dl_huffman_load_table(const char* filename) {
 	// convert to host bit order
 	int i;
 	for (i = 0; i < DL_HUFFMAN_SIZE; i++) {
-		uint8_t* huffentry = buf+(i*PACKED_SIZE);
-		dl_huffman_compact[i].size =  huffentry[0];
-		dl_huffman_compact[i].seq  = (huffentry[1]<<24) | (huffentry[2]<<16) | (huffentry[3]<<8) | (huffentry[4]);
+		uint8_t* huffentry = buf + (i * PACKED_SIZE);
+		dl_huffman_compact[i].size = huffentry[0];
+		dl_huffman_compact[i].seq = (huffentry[1]<<24) | (huffentry[2]<<16) | (huffentry[3]<<8) | (huffentry[4]);
 	}
 
 	// cleanup

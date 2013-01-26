@@ -3,6 +3,8 @@
 #include "helper.h"
 #include <getopt.h>
 
+#include <pthread.h>
+
 #define XRES 1400
 #define YRES 1050
 
@@ -10,6 +12,10 @@ inline void show_screen_info();
 inline void show_usage(char* pname);
 inline void update_screen(usb_dev_handle* handle, dl_cmdstream* cs);
 inline void clear_screen(usb_dev_handle* handle, dl_cmdstream* cs);
+inline void *screencap_task(void *args);
+
+static uint32_t *image;
+static int data_size;
 
 int main(int argc, char* argv[]) {
 
@@ -86,12 +92,14 @@ void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	screencap_info info = get_screencap_info();
 	int w = info.width, h = info.height, f = info.format, rw = h, rh = w;
 	int pv = (YRES - rh) / 2, ph = (XRES - rw) / 2;
-	int image_size = w * h, bpp = get_byte_per_pixel(f), data_size = image_size * bpp;
-	uint32_t* image = (uint32_t*) malloc(data_size);
+	int image_size = w * h, bpp = get_byte_per_pixel(f);
+	data_size = image_size * bpp;
+	image = (uint32_t*) malloc(data_size);
+	pthread_t thread;
+	pthread_create(&thread, NULL, screencap_task, NULL);
 	uint32_t* pixbuf32 = (uint32_t*) malloc(256 * bpp);
 	uint8_t* pixbuf16 = (uint8_t*) malloc(256 * 2);
 	while (1) {
-		do_screencap(image, data_size);
 		int y;
 		for (y = 0; y < rh; y++) {
 			int x;
@@ -123,4 +131,10 @@ void show_screen_info() {
 
 void show_usage(char* pname) {
 	printf("Usage: %s [-i | -h]\n", pname);
+}
+
+void *screencap_task(void *args) {
+	while (1) {
+		do_screencap(image, data_size);
+	}
 }
