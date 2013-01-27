@@ -19,7 +19,7 @@ inline void *screencap_task(void *args);
 inline void do_screencap();
 
 static uint8_t *image;
-static screencap_info info;
+static screencap_info screen_info;
 static int image_size, data_size, image_format;
 static int use_pthread = PTHREAD_OPTION_DEFAULT;
 
@@ -30,11 +30,6 @@ int main(int argc, char *argv[]) {
 		fputs("Couldn't initialize screencap method!\n", stderr);
 		return 1;
 	}
-	info = screencap_getinfo();
-	image_format = info.format;
-	image_size = info.width * info.height;
-	data_size = image_size * 2;
-	image = (uint8_t*) malloc(data_size);
 
 	char *pname = argv[0];
 	int c;
@@ -48,7 +43,7 @@ int main(int argc, char *argv[]) {
 
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "pih", long_options, &option_index);
+		c = getopt_long(argc, argv, "hspi", long_options, &option_index);
 
 		if (c == -1) break;
 
@@ -62,11 +57,20 @@ int main(int argc, char *argv[]) {
 			case 'h':
 				show_help(pname);
 				return 0;
+			case 's':
+				screencap_request_size(400, 640);
+				break;
 			case '?':
 				show_usage(pname);
 				return 1;
 		}
 	}
+
+	screen_info = screencap_getinfo();
+	image_format = screen_info.format;
+	image_size = screen_info.width * screen_info.height;
+	data_size = image_size * 2;
+	image = (uint8_t*) malloc(data_size);
 
 	dl_cmdstream cs;
 	dl_create_stream(&cs, XRES * YRES * 4);

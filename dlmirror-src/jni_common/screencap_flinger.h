@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 
+#define PIXEL_FORMAT_NONE 0
 #define PIXEL_FORMAT_RGBA_8888 1
 #define PIXEL_FORMAT_RGBX_8888 2
 #define PIXEL_FORMAT_RGB_888 3
@@ -18,8 +19,8 @@ extern "C" {
 #define SCREENCAP_HEADER_INDEX_FORMAT 4
 
 typedef struct {
-	uint32_t width;
-	uint32_t height;
+	int width;
+	int height;
 	int format;
 	int bytepp;
 } screencap_info;
@@ -29,6 +30,7 @@ void screencap_release();
 void const *screencap_getdata();
 screencap_info screencap_getinfo();
 size_t screencap_getsize();
+void screencap_request_size(int req_w, int req_h);
 
 #ifdef __cplusplus
 }
