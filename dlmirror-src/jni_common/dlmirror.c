@@ -120,7 +120,7 @@ void clear_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 }
 
 void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
-	int w = screen_info.width, h = screen_info.height, f = scren_info.format, bytepp = screen_info.bytepp, rw = h, rh = w;
+	int w = screen_info.width, h = screen_info.height, f = screen_info.format, bytepp = screen_info.bytepp, rw = h, rh = w;
 	int pv = (YRES - rh) / 2, ph = (XRES - rw) / 2;
 	uint8_t* pixbuf16 = (uint8_t*) malloc(256 * 2);
 	if (use_pthread) {
