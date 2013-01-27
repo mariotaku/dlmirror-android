@@ -1,16 +1,10 @@
-#include <errno.h>
-#include <unistd.h>
-#include <stdio.h>
-
 #include <binder/IMemory.h>
 #include <gui/SurfaceComposerClient.h>
 #include <gui/ISurfaceComposer.h>
-#include <ui/PixelFormat.h>
-#include <utils/Errors.h>
 #include <private/gui/ComposerService.h>
+#include <ui/PixelFormat.h>
 
 #include "screencap_flinger.h"
-
 
 using namespace android;
 

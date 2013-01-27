@@ -16,10 +16,11 @@ inline void show_help(char *pname);
 inline void update_screen(usb_dev_handle *handle, dl_cmdstream *cs);
 inline void clear_screen(usb_dev_handle *handle, dl_cmdstream *cs);
 inline void *screencap_task(void *args);
+inline void do_screencap();
 
 static uint8_t *image;
 static screencap_info info;
-static int image_size, data_size;
+static int image_size, data_size, image_format;
 static int use_pthread = PTHREAD_OPTION_DEFAULT;
 
 int main(int argc, char *argv[]) {
@@ -30,6 +31,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 	info = screencap_getinfo();
+	image_format = info.format;
 	image_size = info.width * info.height;
 	data_size = image_size * 2;
 	image = (uint8_t*) malloc(data_size);
@@ -123,7 +125,7 @@ void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	}
 	while (1) {
 		if (!use_pthread) {
-			screencap_getdata_rgba8888(image, image_size);
+			do_screencap();
 		}
 		int y;
 		for (y = 0; y < rh; y++) {
@@ -170,6 +172,21 @@ void show_help(char* pname) {
 
 void *screencap_task(void *args) {
 	while (1) {
-		screencap_getdata_rgba8888(image, image_size);
+		do_screencap();
+	}
+}
+
+void do_screencap() {
+	switch (image_format) {
+		case PIXEL_FORMAT_RGBA_8888:
+		case PIXEL_FORMAT_RGBX_8888:
+			screencap_getdata_rgbax8888(image, image_size);
+			break;
+		case PIXEL_FORMAT_BGRA_8888:
+			screencap_getdata_bgra8888(image, image_size);
+			break;
+		case PIXEL_FORMAT_RGB_888:
+			screencap_getdata_rgb888(image, image_size);
+			break;
 	}
 }

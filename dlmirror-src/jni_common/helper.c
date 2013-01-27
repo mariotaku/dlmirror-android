@@ -6,13 +6,15 @@
 #define DISPLAY_LINK_VENDOR_ID 0x17E9
 #define HOST_BIT_ORDER 1
 
-uint16_t supported_usb_product_ids[6] = {
-	0x01ae, // DL-120
-	0x0141, // DL-160
-	0x03c1, // DL-165
+uint16_t supported_usb_product_ids[8] = {
+	0x01ae, // DL-120 Series
+	0x0141, // DL-160 Series
+	0x03c1, // DL-165 Series
+	0x01e2, // DL-195 Series
 	0x401a, // Nanovision Mimo
 	0x019b, // ForwardVideo
 	0x0103, // Samsung U70
+	0x016b // Green House GH-USD16
 };
 
 /******************** HELPER FUNCTIONS ********************/
@@ -49,71 +51,39 @@ usb_dev_handle* dl_get_supported_device_handle() {
 	return handle;
 }
 
-void rgb888_to_rgb565(uint8_t* rgb888, uint8_t* rgb565, int count) {
+void screencap_getdata_rgbax8888(uint8_t* data, int count) {
+	uint32_t *rgbax8888 = (uint32_t*) screencap_getdata();
 	int i;
 	for (i = 0; i < count; i++) {
-		unsigned int r = rgb888[i * 3 + 0], g = rgb888[i * 3 + 1], b = rgb888[i * 3 + 2];
-		rgb565[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
-		rgb565[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
-	}
-}
-
-void screencap_getdata_rgba8888(uint8_t* data, int count) {
-	uint32_t *rgba8888 = (uint32_t*) screencap_getdata();
-	int i;
-	for (i = 0; i < count; i++) {
-		uint32_t pixel = rgba8888[i];
+		uint32_t pixel = rgbax8888[i];
 		unsigned int r = pixel & 0xFF, g = (pixel >> 8) & 0xFF, b = (pixel >> 16) & 0xFF;
 		data[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
 		data[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
 	}
 }
 
-void rgba8888_to_rgb565_8(uint32_t* rgba8888, uint8_t* rgb565, int count) {
+void screencap_getdata_rgb888(uint8_t* data, int count) {
+	uint8_t *rgb888 = (uint8_t*) screencap_getdata();
 	int i;
 	for (i = 0; i < count; i++) {
-		uint32_t pixel = rgba8888[i];
-		unsigned int r = pixel & 0xFF, g = (pixel >> 8) & 0xFF, b = (pixel >> 16) & 0xFF;
-		rgb565[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
-		rgb565[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		unsigned int r = i * 3, g = i * 3 + 1, b = r * 3 + 2;
+		data[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
+		data[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
 	}
 }
 
-void rgba8888_to_rgb565_16(uint32_t* rgba8888, uint16_t* rgb565, int count) {
+void screencap_getdata_bgra8888(uint8_t* data, int count) {
+	uint32_t *bgra8888 = (uint32_t*) screencap_getdata();
 	int i;
 	for (i = 0; i < count; i++) {
-		rgb565[i] = color_rgba8888_to_rgb565(rgba8888[i]);
+		uint32_t pixel = bgra8888[i];
+		unsigned int b = pixel & 0xFF, g = (pixel >> 8) & 0xFF, r = (pixel >> 16) & 0xFF;
+		data[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
+		data[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
 	}
 }
 
-uint16_t color_rgba8888_to_rgb565(uint32_t rgba32) {
-	if (sizeof(rgba32) != 4) return 0;
-	unsigned int r = rgba32 & 0xFF, g = (rgba32 >> 8) & 0xFF, b = (rgba32 >> 16) & 0xFF;
-	return (r >> 3 << 11) | (g >> 2 << 5) | b >> 3;
-}
-
-void scale_rgba8888(uint32_t* in, uint32_t* out, int w, int h, int scale) {
-	int i, count = w * h;
-	for (i = 0; i < count; i+= scale) {
-		int x = i / h;
-		if (x % scale != 0) continue;
-		int y = i % h;
-		out[w * y / (scale * scale) + x / scale] = in[i];
-	}
-}
-
-void rotate_scale_rgba8888(uint32_t* in, uint32_t* out, int w, int h, int scale) {
-	int i, count = w * h;
-	int rw = h, rh = w;
-	for (i = 0; i < count; i+= scale) {
-		int rx = i / rh;
-		if (rx % scale != 0) continue;
-		int ry = i % rh;
-		out[rw * ry / (scale * scale) + rx / scale] = in[i];
-	}
-}
-
-void rotate_bitmap32(uint32_t *in, uint32_t *out, int w, int h, int rotate) {
+void rotate_bitmap8(uint8_t *in, uint8_t *out, int w, int h, int rotate) {
 	int cos, sin;
 	switch (rotate) {
 		case 0:
