@@ -30,7 +30,7 @@ void screencap_release();
 void const *screencap_getdata();
 screencap_info screencap_getinfo();
 size_t screencap_getsize();
-void screencap_request_size(int req_w, int req_h);
+void screencap_request_size(uint32_t req_w, uint32_t req_h);
 
 #ifdef __cplusplus
 }
