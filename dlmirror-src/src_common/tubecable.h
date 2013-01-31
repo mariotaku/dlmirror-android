@@ -33,6 +33,15 @@
 
 #define USB_TIMEOUT 1000
 
+// supported DisplayLink devices
+extern uint16_t supported_usb_product_ids[8];
+
+/******************** HELPER FUNCTIONS ********************/
+
+// get a device handle according to vendor and product
+usb_dev_handle* usb_get_device_handle(int vendor, int product, int interface);
+usb_dev_handle* dl_get_supported_device_handle();
+
 /******************** ENCRYPTION STUFF ********************/
 
 // Key sequence for disabling encryption.
@@ -266,9 +275,9 @@ extern uint8_t dl_reg_mode_1920x1080_60[0x1D];
 /******************* ADDRESS REGISTERS ********************/
 
 #define DL_ADDR_FB16_START  0x20 // 16-bit mode, color MSBs, RGB 565
-#define DL_ADDR_FB16_STRIDE 0x23 // 16-bit stride = 2*xres
+#define DL_ADDR_FB16_STRIDE 0x23 // 16-bit stride = 2 * xres
 #define DL_ADDR_FB8_START   0x26 // additional 8 bit for 24-bit mode, color LSBs, RGB 323
-#define DL_ADDR_FB8_STRIDE  0x29 // 8-bit stride = 1*xres
+#define DL_ADDR_FB8_STRIDE  0x29 // 8-bit stride = 1 * xres
 
 // Set a single address register.
 void dl_reg_set_address(dl_cmdstream* cs, uint8_t reg, int address);

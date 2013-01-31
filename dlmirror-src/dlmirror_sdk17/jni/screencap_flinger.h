@@ -1,1 +1,1 @@
-../../jni_common/screencap_flinger.h
+../../src_common/screencap_flinger.h

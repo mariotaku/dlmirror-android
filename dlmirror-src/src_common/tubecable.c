@@ -23,6 +23,52 @@
 
 #include "tubecable.h"
 
+#define DISPLAY_LINK_VENDOR_ID 0x17E9
+
+uint16_t supported_usb_product_ids[8] = {
+	0x01ae, // DL-120 Series
+	0x0141, // DL-160 Series
+	0x03c1, // DL-165 Series
+	0x01e2, // DL-195 Series
+	0x401a, // Nanovision Mimo
+	0x019b, // ForwardVideo
+	0x0103, // Samsung U70
+	0x016b // Green House GH-USD16
+};
+
+/******************** HELPER FUNCTIONS ********************/
+
+usb_dev_handle* usb_get_device_handle(int vendor, int product, int interface) {
+
+	usb_init();
+	usb_find_busses();
+	usb_find_devices();
+
+	struct usb_bus* busses = usb_get_busses();
+	struct usb_bus* bus;
+	for (bus = busses; bus; bus = bus->next) {
+		struct usb_device* dev;
+		for (dev = bus->devices; dev; dev = dev->next) {
+			if ((dev->descriptor.idVendor == vendor) && (dev->descriptor.idProduct == product)) {
+				usb_dev_handle* handle = usb_open(dev);
+				if (!handle) return 0;
+				if (usb_claim_interface(handle, 0) < 0) return 0;
+				return handle;
+			}
+		}
+	}
+	return 0;
+}
+
+usb_dev_handle* dl_get_supported_device_handle() {
+	usb_dev_handle* handle = 0;
+	int i, size = sizeof(supported_usb_product_ids);
+	for (i = 0; i < size; i++) {
+		handle = usb_get_device_handle(DISPLAY_LINK_VENDOR_ID, supported_usb_product_ids[i], 0);
+		if (handle) break;
+	}
+	return handle;
+}
 
 /******************** ENCRYPTION STUFF ********************/
 
@@ -111,17 +157,17 @@ void dl_ctrl_poke(usb_dev_handle* handle, int addr, uint8_t value) {
 }
 
 // Dump the entire 64k of in-device memory to a file.
-void dl_ctrl_dumpmem(usb_dev_handle* handle, char* f) {
-	FILE* dump = fopen(f,"w+");
+void dl_ctrl_dumpmem(usb_dev_handle *handle, char *f) {
+	FILE *dump = fopen(f, "w+");
 	int base;
 	for (base = 0; base < 0x100; base++) {
-		fprintf(dump,"  register space @ 0x%04x:\n", base<<8);
+		fprintf(dump,"  register space @ 0x%04x:\n", base << 8);
 		int i;
 		for (i = 0; i < 256; i++) {
-			if (i % 16 == 0) fprintf(dump,"    ");
-			uint8_t peek = dl_ctrl_peek(handle, (base<<8)+i);
+			if (i % 16 == 0) fprintf(dump, "    ");
+			uint8_t peek = dl_ctrl_peek(handle, (base << 8) + i);
 			fprintf(dump,"%02hhx ",peek);
-			if (i % 16 == 15) fprintf(dump,"\n");
+			if (i % 16 == 15) fprintf(dump, "\n");
 		}
 	}
 	fclose(dump);

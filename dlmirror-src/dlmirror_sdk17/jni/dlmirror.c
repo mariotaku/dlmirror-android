@@ -1,1 +1,1 @@
-../../jni_common/dlmirror.c
+../../src_common/dlmirror.c

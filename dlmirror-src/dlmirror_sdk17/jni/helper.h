@@ -1,1 +1,1 @@
-../../jni_common/helper.h
+../../src_common/helper.h

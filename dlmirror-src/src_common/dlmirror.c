@@ -25,8 +25,7 @@ static int use_pthread = PTHREAD_OPTION_DEFAULT;
 
 int main(int argc, char *argv[]) {
 
-	int screencap_ret = screencap_init();
-	if (!screencap_ret) {
+	if (!screencap_init()) {
 		fputs("Couldn't initialize screencap method!\n", stderr);
 		return 1;
 	}
@@ -87,8 +86,8 @@ int main(int argc, char *argv[]) {
 
 	// default register set & offsets
 	printf("setting default registers for %dx%d@60Hz..\n",XRES,YRES);
-	dl_reg_set_all( &cs, DL_MODE_XY(XRES,YRES));
-	dl_reg_set_offsets( &cs, 0x000000, XRES*2, 0x555555, XRES);
+	dl_reg_set_all(&cs, DL_MODE_XY(XRES,YRES));
+	dl_reg_set_offsets(&cs, 0x000000, XRES * 2, XRES * YRES * 2, XRES);
 	dl_reg_set(&cs, DL_REG_BLANK_SCREEN, 0x00); // enable output
 	dl_reg_set(&cs, DL_REG_SYNC, 0xFF);
 	dl_cmd_sync(&cs);
@@ -100,7 +99,7 @@ int main(int argc, char *argv[]) {
 	free(image);
 	screencap_release();
 	
-	printf("goodbye.\n");
+	printf("Disconnecting device...\n");
 	dl_destroy_stream(&cs);
 	usb_close(handle);
 	return 0;
@@ -120,7 +119,7 @@ void clear_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 }
 
 void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
-	int w = screen_info.width, h = screen_info.height, f = screen_info.format, bytepp = screen_info.bytepp, rw = h, rh = w;
+	int w = screen_info.width, h = screen_info.height, rw = h, rh = w;
 	int pv = (YRES - rh) / 2, ph = (XRES - rw) / 2;
 	uint8_t* pixbuf16 = (uint8_t*) malloc(256 * 2);
 	if (use_pthread) {

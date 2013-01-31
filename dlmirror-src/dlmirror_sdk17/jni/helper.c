@@ -1,1 +1,1 @@
-../../jni_common/helper.c
+../../src_common/helper.c

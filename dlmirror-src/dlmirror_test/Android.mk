@@ -20,8 +20,6 @@ LOCAL_C_INCLUDES += \
  $(LOCAL_PATH)/libusb \
  $(INTERNAL_INCLUDES_PATH)
 
-LOCAL_C_FLAGS += -Wall
-
 include $(BUILD_EXECUTABLE)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
