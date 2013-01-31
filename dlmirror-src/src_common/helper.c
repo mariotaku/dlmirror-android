@@ -7,35 +7,44 @@
 
 /******************** HELPER FUNCTIONS ********************/
 
-void screencap_getdata_rgbax8888(uint8_t* data, int count) {
+void screencap_getdata_rgbax8888(uint8_t *rgb565, uint8_t *rgb323, int count) {
 	uint32_t *rgbax8888 = (uint32_t*) screencap_getdata();
 	int i;
 	for (i = 0; i < count; i++) {
 		uint32_t pixel = rgbax8888[i];
 		unsigned int r = pixel & 0xFF, g = (pixel >> 8) & 0xFF, b = (pixel >> 16) & 0xFF;
-		data[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
-		data[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		rgb565[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
+		rgb565[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		if (rgb323) {
+			rgb323[i] = ((r & 0x07) << 5) | ((g & 0x03) << 3) | (b & 0x07);
+		}
 	}
 }
 
-void screencap_getdata_rgb888(uint8_t* data, int count) {
+void screencap_getdata_rgb888(uint8_t *rgb565, uint8_t *rgb323, int count) {
 	uint8_t *rgb888 = (uint8_t*) screencap_getdata();
 	int i;
 	for (i = 0; i < count; i++) {
 		unsigned int r = rgb888[i * 3], g = rgb888[i * 3 + 1], b = rgb888[r * 3 + 2];
-		data[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
-		data[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		rgb565[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
+		rgb565[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		if (rgb323) {
+			rgb323[i] = ((r & 0x07) << 5) | ((g & 0x03) << 3) | (b & 0x07);
+		}
 	}
 }
 
-void screencap_getdata_bgra8888(uint8_t* data, int count) {
+void screencap_getdata_bgra8888(uint8_t *rgb565, uint8_t *rgb323, int count) {
 	uint32_t *bgra8888 = (uint32_t*) screencap_getdata();
 	int i;
 	for (i = 0; i < count; i++) {
 		uint32_t pixel = bgra8888[i];
 		unsigned int b = pixel & 0xFF, g = (pixel >> 8) & 0xFF, r = (pixel >> 16) & 0xFF;
-		data[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
-		data[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		rgb565[i * 2 + 0] = (r & 0xF8) | ((g & 0xE0) >> 5);
+		rgb565[i * 2 + 1] = ((g & 0x1C) << 3) | ((b & 0xF8) >> 3);
+		if (rgb323) {
+			rgb323[i] = ((r & 0x07) << 5) | ((g & 0x03) << 3) | (b & 0x07);
+		}
 	}
 }
 

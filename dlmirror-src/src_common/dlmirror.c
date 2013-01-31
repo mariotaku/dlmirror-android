@@ -5,7 +5,8 @@
 #include "tubecable.h"
 #include "helper.h"
 
-#define PTHREAD_OPTION_DEFAULT 0
+#define MULTI_THREAD_OPTION_DEFAULT 0
+#define TRUE_COLOR_OPTION_DEFAULT 0
 
 #define XRES 1400
 #define YRES 1050
@@ -18,10 +19,10 @@ inline void clear_screen(usb_dev_handle *handle, dl_cmdstream *cs);
 inline void *screencap_task(void *args);
 inline void do_screencap();
 
-static uint8_t *image;
+static uint8_t *rgb565, *rgb323 = 0;
 static screencap_info screen_info;
-static int image_size, data_size, image_format;
-static int use_pthread = PTHREAD_OPTION_DEFAULT;
+static int image_size, image_format;
+static int multi_thread = MULTI_THREAD_OPTION_DEFAULT, true_color = TRUE_COLOR_OPTION_DEFAULT;
 
 int main(int argc, char *argv[]) {
 
@@ -35,32 +36,41 @@ int main(int argc, char *argv[]) {
 
 	while (c != -1) {
 		static struct option long_options[] = {
-			{"pthread", no_argument, 0, 'p'},
+			{"multi-thread", no_argument, 0, 'm'},
 			{"info", no_argument, 0, 'i'},
 			{"help", no_argument, 0, 'h'},
+			{"scale", no_argument, 0, 's'},
+			{"rotate", no_argument, 0, 'r'},
+			{"true-color", no_argument, 0, 't'}
 		};
 
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "hspi", long_options, &option_index);
+		c = getopt_long(argc, argv, "hsrtmi", long_options, &option_index);
 
 		if (c == -1) break;
 
 		switch (c) {
-			case 'p':
-				use_pthread = 1;
+			case 'm':
+				multi_thread = 1;
 				break;
-			case 'i':
-				show_screen_info();
-				return 0;
-			case 'h':
-				show_help(pname);
-				return 0;
 			case 's':
 				screencap_request_size(400, 640);
 				break;
+			case 't':
+				true_color = 1;
+				break;
+			case 'i':
+				show_screen_info();
+				screencap_release();
+				return 0;
+			case 'h':
+				show_help(pname);
+				screencap_release();
+				return 0;
 			case '?':
 				show_usage(pname);
+				screencap_release();
 				return 1;
 		}
 	}
@@ -68,8 +78,10 @@ int main(int argc, char *argv[]) {
 	screen_info = screencap_getinfo();
 	image_format = screen_info.format;
 	image_size = screen_info.width * screen_info.height;
-	data_size = image_size * 2;
-	image = (uint8_t*) malloc(data_size);
+	rgb565 = (uint8_t*) malloc(image_size * 2);
+	if (true_color) {
+		rgb323 = (uint8_t*) malloc(image_size);
+	}
 
 	dl_cmdstream cs;
 	dl_create_stream(&cs, XRES * YRES * 4);
@@ -96,7 +108,10 @@ int main(int argc, char *argv[]) {
 	clear_screen(handle, &cs);
 	update_screen(handle, &cs);
 
-	free(image);
+	free(rgb565);
+	if (rgb323) {
+		free(rgb323);
+	}
 	screencap_release();
 	
 	printf("Disconnecting device...\n");
@@ -121,13 +136,13 @@ void clear_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 	int w = screen_info.width, h = screen_info.height, rw = h, rh = w;
 	int pv = (YRES - rh) / 2, ph = (XRES - rw) / 2;
-	uint8_t* pixbuf16 = (uint8_t*) malloc(256 * 2);
-	if (use_pthread) {
+	uint8_t *pixbuf565 = (uint8_t*) malloc(256 * 2), *pixbuf323 = (uint8_t*) malloc(256);
+	if (multi_thread) {
 		pthread_t thread;
 		pthread_create(&thread, NULL, screencap_task, NULL);
 	}
 	while (1) {
-		if (!use_pthread) {
+		if (!multi_thread) {
 			do_screencap();
 		}
 		int y;
@@ -137,13 +152,20 @@ void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 				int rem = rw - x, pcount = rem > 256 ? 256 : rem;
 				int c;
 				for (c = 0; c < pcount; c++) {
-					int addr = ((c + x) * rh + y) * 2;
-					pixbuf16[c * 2] = image[addr];
-					pixbuf16[c * 2 + 1] = image[addr + 1];
+					int idx = (c + x) * rh + y;
+					pixbuf565[c * 2] = rgb565[idx * 2];
+					pixbuf565[c * 2 + 1] = rgb565[idx * 2 + 1];
+					if (rgb323) {
+						pixbuf323[c] = rgb323[idx];
+					}
 				}
 				int sx = ph + x, sy = YRES - (pv + y);
-				int addr = sy * XRES * 2 + sx * 2;
-				dl_gfx_write(cs, addr, pcount, pixbuf16);
+				int addr565 = sy * XRES * 2 + sx * 2;
+				dl_gfx_write(cs, addr565, pcount, pixbuf565);
+				if (rgb323) {
+					int addr323 = XRES * YRES * 2 + sy * XRES + sx;
+					dl_gfx_write(cs, addr323, pcount, pixbuf323);
+				}
 			}
 		}
 		dl_cmd_sync(cs);
@@ -153,7 +175,8 @@ void update_screen(usb_dev_handle* handle, dl_cmdstream* cs) {
 			break;
 		}
 	}
-	free(pixbuf16);
+	free(pixbuf565);
+	free(pixbuf323);
 }
 
 void show_screen_info() {
@@ -163,14 +186,15 @@ void show_screen_info() {
 }
 
 void show_usage(char* pname) {
-	printf("Usage: %s [-i | -h | -p]\n", pname);
+	printf("Usage: %s [-i | -h | -t | -s | -r | -m]\n", pname);
 }
 
 void show_help(char* pname) {
 	show_usage(pname);
-	printf(" -p, --pthread\t\tUse different thread for screencap, faster but may cause wrong graphics\n");
-	printf(" -i, --info\t\tShow screen info\n");
-	printf(" -h, --help\t\tShow this help\n");
+	printf(" -m, --multi-thread\t\tuse different thread for screencap\n");
+	printf(" -t, --true-color\t\tenable 24-bit color mode\n");
+	printf(" -i, --info\t\t\tprint technical info\n");
+	printf(" -h, --help\t\t\tprint this help\n");
 }
 
 void *screencap_task(void *args) {
@@ -183,13 +207,13 @@ void do_screencap() {
 	switch (image_format) {
 		case PIXEL_FORMAT_RGBA_8888:
 		case PIXEL_FORMAT_RGBX_8888:
-			screencap_getdata_rgbax8888(image, image_size);
+			screencap_getdata_rgbax8888(rgb565, rgb323, image_size);
 			break;
 		case PIXEL_FORMAT_BGRA_8888:
-			screencap_getdata_bgra8888(image, image_size);
+			screencap_getdata_bgra8888(rgb565, rgb323, image_size);
 			break;
 		case PIXEL_FORMAT_RGB_888:
-			screencap_getdata_rgb888(image, image_size);
+			screencap_getdata_rgb888(rgb565, rgb323, image_size);
 			break;
 	}
 }

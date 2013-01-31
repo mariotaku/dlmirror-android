@@ -13,6 +13,6 @@
 
 void rotate_bitmap8(uint8_t *in, uint8_t *out, int w, int h, int rotate);
 
-void screencap_getdata_rgbax8888(uint8_t* data, int count);
-void screencap_getdata_bgra8888(uint8_t* data, int count);
-void screencap_getdata_rgb888(uint8_t* data, int count);
+void screencap_getdata_rgbax8888(uint8_t *rgb565, uint8_t *rgb323, int count);
+void screencap_getdata_bgra8888(uint8_t *rgb565, uint8_t *rgb323, int count);
+void screencap_getdata_rgb888(uint8_t *rgb565, uint8_t *rgb323, int count);
